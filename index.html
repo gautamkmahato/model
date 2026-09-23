@@ -835,6 +835,7 @@ async function localBuild(){
  setStatus("Loading your model\u2026");
  try{
   const ort=await loadOrt();
+  setStatus("Starting the model\u2026");
   const v=JSON.parse(LOCAL.vocab);
   LOCAL.itos=v.itos;LOCAL.mode=v.mode||"latex";
   LOCAL.sess=await ort.InferenceSession.create(new Uint8Array(LOCAL.onnx),{executionProviders:["wasm"]});
@@ -1247,13 +1248,24 @@ async function localFromSite(quiet){
   if(!quiet)setStatus("Loading from the site only works when the page is hosted, not opened from a file.");
   return}
  try{
-  if(!quiet)setStatus("Fetching the model from this site\u2026");
+  if(!quiet)setStatus("Fetching " + VOCAB_URL + "\u2026");
   const vr=await fetch(VOCAB_URL,{cache:"force-cache"});
-  if(!vr.ok)throw new Error("no vocab.json on this site");
+  if(!vr.ok)throw new Error(VOCAB_URL+" gave "+vr.status);
   LOCAL.vocab=await vr.text();
   const mr=await fetch(MODEL_URL,{cache:"force-cache"});
-  if(!mr.ok)throw new Error("no hwr.onnx on this site");
-  LOCAL.onnx=await mr.arrayBuffer();
+  if(!mr.ok)throw new Error(MODEL_URL+" gave "+mr.status);
+  /* Read the model in chunks so the download shows progress instead of looking stuck. */
+  const total=+(mr.headers.get("Content-Length")||0);
+  if(mr.body&&mr.body.getReader){
+   const rd=mr.body.getReader(),chunks=[];let got=0,last=0;
+   for(;;){const{done,value}=await rd.read();if(done)break;
+    chunks.push(value);got+=value.length;
+    if(performance.now()-last>250){last=performance.now();
+     setStatus("Downloading the model: "+(got/1e6).toFixed(1)+(total?" of "+(total/1e6).toFixed(1):"")+" MB")}}
+   const buf=new Uint8Array(got);let at=0;
+   for(const c of chunks){buf.set(c,at);at+=c.length}
+   LOCAL.onnx=buf.buffer}
+  else LOCAL.onnx=await mr.arrayBuffer();
   LOCAL.name=MODEL_URL.split("/").pop()+" ("+(LOCAL.onnx.byteLength/1e6).toFixed(1)+" MB)";
   await localBuild()}
  catch(e){if(!quiet)setStatus("Could not load a model from this site: "+(e.message||e))}}
