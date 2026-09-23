@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Ink board</title>
+<style>
+:root{--board:#22254a;--deep:#1a1c3a;--panel:#101227;--rule:#2e3260;--chalk:#eef1ff;--dim:#8f97c4;
+ --fit:#4fd6c0;--sel:#7cc4ff;--sans:"Helvetica Neue",Helvetica,Inter,system-ui,sans-serif;
+ --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--panel);color:var(--chalk);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{display:flex}
+#stage{flex:1;position:relative;background:radial-gradient(120% 90% at 30% 10%,#292d57,var(--board) 45%,var(--deep));touch-action:none;overflow:hidden}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#bars{position:absolute;left:16px;top:14px;display:flex;flex-wrap:wrap;gap:8px;z-index:6}
+.bar{display:flex;background:#0d0f22d9;border:1px solid var(--rule);backdrop-filter:blur(10px);border-radius:9px;padding:3px;gap:2px}
+.bar button{font-family:inherit;font-size:12.5px;color:var(--dim);background:none;border:none;padding:7px 13px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.bar button.on{background:var(--fit);color:#0d1024;font-weight:600}
+.bar button.on.s{background:var(--sel)}
+#ok{position:absolute;display:none;z-index:8;background:var(--fit);color:#0d1024;border:none;font-family:inherit;
+ font-weight:600;font-size:13px;padding:9px 18px;border-radius:999px;cursor:pointer;box-shadow:0 4px 18px #0008}
+#ok.on{display:block}#ok span{font-weight:400;opacity:.7;font-size:11.5px;margin-left:5px}
+#hud{position:absolute;left:16px;bottom:14px;display:flex;gap:18px;font-family:var(--mono);font-size:10.5px;color:var(--dim);pointer-events:none}
+.metric b{display:block;font-size:20px;color:var(--chalk);line-height:1;font-variant-numeric:tabular-nums;font-weight:400}
+#hint{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);text-align:center;color:var(--dim);
+ max-width:36ch;line-height:1.55;font-size:15px;transition:opacity .4s;pointer-events:none}
+#hint em{font-style:normal;color:var(--chalk)}
+#rail{width:322px;flex:none;background:var(--panel);border-left:1px solid var(--rule);display:flex;flex-direction:column;overflow:hidden}
+#rh{padding:16px 20px 12px;border-bottom:1px solid var(--rule)}
+#rh h1{font-size:16px;font-weight:600}#rh p{font-size:12.5px;color:var(--dim);margin-top:5px;line-height:1.45}
+#scroll{overflow-y:auto;flex:1;overscroll-behavior:contain}
+.g{border-bottom:1px solid var(--rule);padding:14px 20px 16px}
+.g h2{font-size:12px;font-weight:600;color:var(--dim);margin-bottom:11px;display:flex;justify-content:space-between}
+.g h2 em{font-style:normal;color:var(--sel);font-weight:600}
+.hide{display:none}
+.sw{display:flex;gap:7px;flex-wrap:wrap}
+.sw i{width:26px;height:26px;border-radius:7px;cursor:pointer;display:block;border:2px solid transparent;box-shadow:inset 0 0 0 1px #0006}
+.sw i.on{border-color:var(--chalk)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{font-family:inherit;font-size:12px;padding:7px 12px;border-radius:999px;cursor:pointer;
+ background:#1c1f3f;border:1px solid var(--rule);color:var(--dim)}
+.chips button.on{background:var(--sel);border-color:var(--sel);color:#0d1024;font-weight:600}
+.c{margin-bottom:12px}.c:last-child{margin-bottom:0}
+.c .t{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:4px}
+.c label{font-size:12.5px}
+.c output{font-family:var(--mono);font-size:11.5px;color:var(--fit);font-variant-numeric:tabular-nums}
+.n{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.42}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:16px;background:transparent;cursor:pointer;display:block}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--rule)}
+input[type=range]::-moz-range-track{height:2px;background:var(--rule)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--chalk);margin-top:-5.5px}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--chalk);border:none}
+.r{display:flex;gap:9px;align-items:flex-start;margin-bottom:9px;font-size:12.5px;line-height:1.35}
+input[type=checkbox]{appearance:none;-webkit-appearance:none;width:15px;height:15px;border:1px solid var(--rule);
+ background:#191c3a;border-radius:3px;cursor:pointer;position:relative;flex:none;margin-top:1px}
+input[type=checkbox]:checked{background:var(--fit);border-color:var(--fit)}
+input[type=checkbox]:checked::after{content:"";position:absolute;left:4.5px;top:1px;width:4px;height:8px;border:solid #101227;border-width:0 2px 2px 0;transform:rotate(42deg)}
+button.b{font-family:inherit;font-size:12.5px;color:var(--chalk);background:#1c1f3f;border:1px solid var(--rule);padding:7px 12px;border-radius:5px;cursor:pointer}
+.btns{display:flex;gap:7px;flex-wrap:wrap}
+@media(max-width:900px){body{flex-direction:column}#rail{width:100%;height:44%;border-left:none;border-top:1px solid var(--rule)}}
+.kvline{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);padding:3px 0}
+.kvline b{color:var(--chalk);font-weight:500}
+.fl{display:block;font-size:12px;color:var(--dim);margin:11px 0 4px}
+.tx{width:100%;font-family:var(--mono);font-size:12px;color:var(--chalk);background:#191c3a;border:1px solid var(--rule);border-radius:5px;padding:7px 9px;outline:none}
+.tx:focus{border-color:var(--fit)}
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <div id="bars">
+    <div class="bar" id="tool"><button data-k="draw" class="on">Draw</button><button data-k="write">Write</button><button data-k="select" class="s">Select</button></div>
+    <div class="bar" id="trigger"><button data-t="auto" class="on">Automatic</button><button data-t="manual">Manual</button></div>
+    <div class="bar" id="modes"><button data-m="lib" class="on">Snap to shape</button><button data-m="tidy">Tidy only</button><button data-m="raw">Raw ink</button></div>
+  </div>
+  <button id="ok">OK<span id="okn"></span></button>
+  <p id="hint">Draw a few shapes, then hit <em>Select</em> and drag a box around them.</p>
+  <div id="hud">
+    <div class="metric"><b id="mS">0</b><span>pending</span></div>
+    <div class="metric"><b id="mC">0</b><span>objects</span></div>
+    <div class="metric"><b id="mSel">0</b><span>selected</span></div>
+  </div>
+</div>
+
+<aside id="rail">
+  <div id="rh"><h1>Ink board</h1><p>Drag a box to select. Drag inside the blue outline to move.</p></div>
+  <div id="scroll">
+
+    <section class="g" id="gNone"><h2>Nothing selected</h2>
+      <p class="n" style="margin-top:0">In Select mode, drag on empty space to lasso objects. Shift-click adds one. Drag anywhere inside the blue outline to move the whole selection.</p></section>
+
+    <section class="g hide" id="gSel"><h2><span>Selected</span><em id="selName"></em></h2>
+      <div class="sw" id="swColor"></div>
+      <div style="margin-top:13px" class="chips" id="widths"></div>
+      <div class="btns" style="margin-top:13px">
+        <button class="b" id="bDup">Duplicate</button><button class="b" id="bDel">Delete</button><button class="b" id="bReset">Reset</button></div>
+    </section>
+
+    <section class="g hide" id="gLabels"><h2>Labels</h2>
+      <div class="chips" id="labelChips"></div>
+      <p class="n">Vertices are lettered A, B, C. Edges get lowercase letters. Angles are measured from the geometry, not guessed.</p>
+    </section>
+
+    <section class="g hide" id="gFaces"><h2>Faces</h2>
+      <div class="chips"><button id="faceMode">Pick faces</button><button id="faceClear">Clear all</button></div>
+      <div class="sw" id="swFace" style="margin-top:12px"></div>
+      <p class="n">Turn on Pick faces, then tap a face on the solid. Tap it again with the same colour to clear it.</p>
+    </section>
+
+    <section class="g hide" id="g3d"><h2>3D view</h2>
+      <div class="chips" id="projChips"></div>
+      <p class="n">Cabinet is the textbook view: a true square front face with depth up-right at half length.</p>
+      <div class="r" style="margin-top:11px"><input type="checkbox" id="cDepth" checked><label for="cDepth">Dash rear edges</label></div>
+      <div class="c"><div class="t"><label for="sOrbit">Orbit sensitivity</label><output id="oOrbit">0.9×</output></div>
+        <input type="range" id="sOrbit" min="0.2" max="3" step="0.1" value="0.9"></div>
+    </section>
+
+    <section class="g"><h2>Manipulation</h2>
+      <div class="r"><input type="checkbox" id="cUniform" checked><label for="cUniform">Corner handles keep aspect</label></div>
+      <div class="r"><input type="checkbox" id="cSnapRot" checked><label for="cSnapRot">Snap rotation to 15°</label></div>
+    </section>
+
+    <section class="g" id="gWrite"><h2>Writing &middot; MyScript</h2>
+      <p class="n" style="margin-top:0">Turn on <b>Write</b> in the top bar and write normally. Cursive, joined letters and multiple lines are fine. Without keys, a weak built-in matcher runs instead.</p>
+      <div class="kvline"><span>Engine</span><b id="engName">&mdash;</b></div>
+      <div class="kvline"><span>Requests this month</span><b id="msCount">0</b></div>
+      <div class="chips" style="margin-top:11px" id="msType"></div>
+      <div class="chips" style="margin-top:8px" id="msLang"></div>
+      <div class="r" style="margin-top:10px"><input type="checkbox" id="msSolve"><label for="msSolve">Solve maths (adds the answer)</label></div>
+      <label class="fl" for="msApp">Application key</label>
+      <input class="tx" id="msApp" type="text" autocomplete="off" spellcheck="false" placeholder="from developer.myscript.com">
+      <label class="fl" for="msHmac">HMAC key</label>
+      <input class="tx" id="msHmac" type="password" autocomplete="off" spellcheck="false" placeholder="from developer.myscript.com">
+      <div class="btns" style="margin-top:10px">
+        <button class="b" id="msSave">Save keys</button>
+        <button class="b" id="msTest">Test keys</button>
+        <button class="b" id="msForget">Forget</button></div>
+      <p class="n" id="wStatus">&mdash;</p>
+      <div class="kvline" style="margin-top:14px"><span>Your own model</span><b id="mdlName">not loaded</b></div>
+      <label class="fl" for="mdlOnnx">hwr.onnx</label>
+      <input class="tx" id="mdlOnnx" type="file" accept=".onnx">
+      <label class="fl" for="mdlVocab">vocab.json</label>
+      <input class="tx" id="mdlVocab" type="file" accept=".json">
+      <div class="btns" style="margin-top:8px"><button class="b" id="mdlUnload">Unload model</button></div>
+      <p class="n">Pick both files from your Drive folder <b>export_mathwriting</b>. Your model then runs here, offline and free, instead of MyScript.</p>
+
+      <div class="kvline" style="margin-top:14px"><span>Training samples saved</span><b id="smpCount">0</b></div>
+      <label class="fl" for="smpLabel">What you wrote, exactly</label>
+      <input class="tx" id="smpLabel" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. Hello world">
+      <div class="btns" style="margin-top:8px">
+        <button class="b" id="smpSave">Save as sample</button>
+        <button class="b" id="smpDl">Download samples</button>
+        <button class="b" id="smpClear">Clear</button></div>
+      <p class="n">To collect a sample: switch to <b>Manual</b>, write, type what you wrote above, then click <b>Save as sample</b> instead of OK. Download the file for the training notebook.</p>
+      <p class="n">Keys are stored only in this browser. Fine for testing. Before shipping, move the call to your own server so the HMAC key is never sent to users.</p>
+      <div class="c" style="margin-top:11px"><div class="t"><label for="sWSettle">Pause before converting</label><output id="oWSettle">2.4 s</output></div>
+        <input type="range" id="sWSettle" min="0.6" max="6" step="0.2" value="2.4">
+        <p class="n">Automatic mode only. Each conversion is one request against your quota, so Manual mode with the OK button uses far fewer.</p></div>
+    </section>
+
+    <section class="g"><h2>Recognition</h2>
+      <div class="c"><div class="t"><label for="sBias">Regularity preference</label><output id="oBias">1.0×</output></div>
+        <input type="range" id="sBias" min="0" max="3" step="0.1" value="1"></div>
+      <div class="c"><div class="t"><label for="sCorner">Minimum corner angle</label><output id="oCorner">32°</output></div>
+        <input type="range" id="sCorner" min="8" max="80" step="1" value="32"></div>
+      <div class="c"><div class="t"><label for="sMargin">Side trim</label><output id="oMargin">0.22</output></div>
+        <input type="range" id="sMargin" min="0" max="0.4" step="0.02" value="0.22"></div>
+      <div class="c"><div class="t"><label for="sLevel">Level snap</label><output id="oLevel">14°</output></div>
+        <input type="range" id="sLevel" min="0" max="30" step="1" value="14"></div>
+      <div class="c"><div class="t"><label for="sSettle">Settle timeout</label><output id="oSettle">700 ms</output></div>
+        <input type="range" id="sSettle" min="150" max="2500" step="50" value="700"></div>
+    </section>
+
+    <section class="g"><h2>Board</h2><div class="btns">
+      <button class="b" id="bNow">Commit now</button><button class="b" id="bAll">Select all</button><button class="b" id="bClear">Clear all</button></div></section>
+  </div>
+</aside>
+
+<script>
+(function(){
+"use strict";
+function $(i){return document.getElementById(i)}
+const cv=$("cv"),ctx=cv.getContext("2d",{desynchronized:true}),stage=$("stage");
+const P={bias:1,corner:32,win:7,margin:.22,level:14,par:14,weld:.09,settle:700,
+ uniform:true,snapRot:true,orbit:.9,depth:true};
+[["sBias","oBias","bias",v=>v.toFixed(1)+"\u00d7"],["sCorner","oCorner","corner",v=>v+"\u00b0"],
+ ["sMargin","oMargin","margin",v=>v.toFixed(2)],["sLevel","oLevel","level",v=>v+"\u00b0"],
+ ["sSettle","oSettle","settle",v=>v+" ms"],["sOrbit","oOrbit","orbit",v=>v.toFixed(1)+"\u00d7"]
+].forEach(([s,o,k,f])=>{const S=$(s),O=$(o);if(!S)return;S.value=P[k];O.textContent=f(+S.value);
+ S.oninput=()=>{P[k]=+S.value;O.textContent=f(+S.value)}});
+["cUniform:uniform","cSnapRot:snapRot","cDepth:depth"].forEach(p=>{
+ const[i,k]=p.split(":");const e=$(i);if(!e)return;e.checked=P[k];e.onchange=()=>P[k]=e.checked});
+
+let TOOL="draw",TRIG="auto",MODE="lib",PROJ="cabinet",WPAUSE=2.4;
+document.querySelectorAll("#tool button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll("#tool button").forEach(x=>x.classList.remove("on"));b.classList.add("on");
+ TOOL=b.dataset.k;if(TOOL!=="select")setSel([]);
+ $("modes").style.opacity=TOOL==="write"?".4":"1";
+ $("modes").style.pointerEvents=TOOL==="write"?"none":"auto"});
+document.querySelectorAll("#trigger button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll("#trigger button").forEach(x=>x.classList.remove("on"));b.classList.add("on");TRIG=b.dataset.t});
+document.querySelectorAll("#modes button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll("#modes button").forEach(x=>x.classList.remove("on"));b.classList.add("on");MODE=b.dataset.m});
+
+let W=0,H=0;
+function resize(){const d=Math.min(devicePixelRatio||1,2.5);W=stage.clientWidth;H=stage.clientHeight;
+ cv.width=W*d|0;cv.height=H*d|0;ctx.setTransform(d,0,0,d,0,0)}
+addEventListener("resize",resize);
+
+/* ============ utils ============ */
+const D=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),LP=(a,b,t)=>a+(b-a)*t,dg=r=>r*180/Math.PI;
+function plen(p){let L=0;for(let i=1;i<p.length;i++)L+=D(p[i-1],p[i]);return L}
+function bbox(p){let a=1e9,b=1e9,c=-1e9,d=-1e9;for(const q of p){a=Math.min(a,q.x);b=Math.min(b,q.y);c=Math.max(c,q.x);d=Math.max(d,q.y)}
+ return{x0:a,y0:b,x1:c,y1:d,w:c-a,h:d-b,cx:(a+c)/2,cy:(b+d)/2,diag:Math.hypot(c-a,d-b)}}
+function resample(p,n){const L=plen(p);if(L<=0)return new Array(n).fill(p[0]);
+ const st=L/(n-1),out=[p[0]],s=p.slice();let d=0;
+ for(let i=1;i<s.length;i++){const g=D(s[i-1],s[i]);
+  if(d+g>=st&&g>0){const t=(st-d)/g,q={x:LP(s[i-1].x,s[i].x,t),y:LP(s[i-1].y,s[i].y,t)};out.push(q);s.splice(i,0,q);d=0}else d+=g}
+ while(out.length<n)out.push(p[p.length-1]);return out.slice(0,n)}
+function segD(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,L=dx*dx+dy*dy;if(!L)return D(p,a);
+ let t=((p.x-a.x)*dx+(p.y-a.y)*dy)/L;t=Math.max(0,Math.min(1,t));return Math.hypot(p.x-(a.x+t*dx),p.y-(a.y+t*dy))}
+function interior(a,b,c){const a1=Math.atan2(a.y-b.y,a.x-b.x),a2=Math.atan2(c.y-b.y,c.x-b.x);
+ return Math.abs(dg(Math.atan2(Math.sin(a1-a2),Math.cos(a1-a2))))}
+function pcaLine(p){const n=p.length;let cx=0,cy=0;for(const q of p){cx+=q.x;cy+=q.y}cx/=n;cy/=n;
+ let sxx=0,syy=0,sxy=0;for(const q of p){const dx=q.x-cx,dy=q.y-cy;sxx+=dx*dx;syy+=dy*dy;sxy+=dx*dy}
+ const th=.5*Math.atan2(2*sxy,sxx-syy);return{c:{x:cx,y:cy},d:{x:Math.cos(th),y:Math.sin(th)}}}
+function xline(l1,l2){const den=l1.d.x*l2.d.y-l1.d.y*l2.d.x;if(Math.abs(den)<1e-4)return null;
+ const dx=l2.c.x-l1.c.x,dy=l2.c.y-l1.c.y,t=(dx*l2.d.y-dy*l2.d.x)/den;
+ return{x:l1.c.x+t*l1.d.x,y:l1.c.y+t*l1.d.y}}
+function projL(p,l){const t=(p.x-l.c.x)*l.d.x+(p.y-l.c.y)*l.d.y;return{x:l.c.x+t*l.d.x,y:l.c.y+t*l.d.y}}
+const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+const addv=(a,b)=>({x:a.x+b.x,y:a.y+b.y}),subv=(a,b)=>({x:a.x-b.x,y:a.y-b.y}),mulv=(a,s)=>({x:a.x*s,y:a.y*s});
+function centroid(v){return{x:v.reduce((a,p)=>a+p.x,0)/v.length,y:v.reduce((a,p)=>a+p.y,0)/v.length}}
+function corners(p,closed){const n=p.length,k=Math.max(2,Math.round(n*P.win/100)),turn=new Array(n).fill(0);
+ for(let i=0;i<n;i++){if(!closed&&(i<k||i>=n-k))continue;turn[i]=180-interior(p[(i-k+n)%n],p[i],p[(i+k)%n])}
+ const cand=[];for(let i=0;i<n;i++)if(turn[i]>=P.corner)cand.push(i);
+ cand.sort((a,b)=>turn[b]-turn[a]);
+ const win=Math.max(3,Math.round(n*.09)),acc=[];
+ for(const i of cand){if(acc.length>=8)break;let ok=true;
+  for(const j of acc){let d=Math.abs(i-j);if(closed)d=Math.min(d,n-d);if(d<win){ok=false;break}}
+  if(ok)acc.push(i)}
+ return acc.sort((a,b)=>a-b)}
+function refine(p,cs,closed){const n=p.length,segs=[];
+ if(closed){for(let i=0;i<cs.length;i++)segs.push([cs[i],cs[(i+1)%cs.length]])}
+ else{for(let i=0;i<cs.length-1;i++)segs.push([cs[i],cs[i+1]])}
+ const lines=segs.map(([a,b])=>{let tot=closed?((b-a+n)%n):(b-a);if(tot<2)tot=2;
+  const m=Math.min(Math.floor(tot*P.margin),Math.floor((tot-2)/2)),sb=[];
+  for(let k=m;k<=tot-m;k++)sb.push(p[(a+k)%n]);
+  if(sb.length<3){sb.length=0;for(let k=0;k<=tot;k++)sb.push(p[(a+k)%n])}
+  return pcaLine(sb)});
+ const lim=bbox(p).diag*.6,V=[];
+ if(closed){for(let i=0;i<lines.length;i++){const x=xline(lines[(i-1+lines.length)%lines.length],lines[i]),o=p[cs[i]];
+  V.push(x&&D(x,o)<lim?x:o)}}
+ else{V.push(projL(p[cs[0]],lines[0]));
+  for(let i=1;i<lines.length;i++){const x=xline(lines[i-1],lines[i]),o=p[cs[i]];V.push(x&&D(x,o)<lim?x:o)}
+  V.push(projL(p[cs[cs.length-1]],lines[lines.length-1]))}
+ return V}
+/* Pick the edge already closest to an axis, weighted by length, and level that one.
+   Using the longest edge missed regular polygons, where every edge is the same length. */
+function levelSnap(V){if(P.level<=0||V.length<2)return V;
+ let bi=0,best=1e9,bl=0;
+ for(let i=0;i<V.length;i++){const j=(i+1)%V.length,l=D(V[i],V[j]);
+  if(l<3)continue;
+  const a=Math.atan2(V[j].y-V[i].y,V[j].x-V[i].x);
+  let off=dg(a)%90;if(off>45)off-=90;if(off<-45)off+=90;
+  const sc=Math.abs(off)-l*.006;
+  if(sc<best){best=sc;bi=i;bl=l}}
+ if(!bl)return V;
+ const j=(bi+1)%V.length,a=Math.atan2(V[j].y-V[bi].y,V[j].x-V[bi].x);
+ let d=dg(a)%90;if(d>45)d-=90;if(d<-45)d+=90;if(Math.abs(d)>P.level)return V;
+ const c=centroid(V),t=-d*Math.PI/180,co=Math.cos(t),si=Math.sin(t);
+ return V.map(p=>{const dx=p.x-c.x,dy=p.y-c.y;return{x:c.x+dx*co-dy*si,y:c.y+dx*si+dy*co}})}
+function circleFit(p){let sx=0,sy=0,sxx=0,syy=0,sxy=0,sxz=0,syz=0,sz=0;const n=p.length;
+ for(const q of p){const z=q.x*q.x+q.y*q.y;sx+=q.x;sy+=q.y;sxx+=q.x*q.x;syy+=q.y*q.y;sxy+=q.x*q.y;sxz+=q.x*z;syz+=q.y*z;sz+=z}
+ const A=[[sxx,sxy,sx],[sxy,syy,sy],[sx,sy,n]],B=[sxz,syz,sz];
+ const dt=m=>m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+ const d0=dt(A);if(Math.abs(d0)<1e-6)return null;
+ const s=c=>{const M=A.map(r=>r.slice());for(let i=0;i<3;i++)M[i][c]=B[i];return dt(M)/d0};
+ const cx=s(0)/2,cy=s(1)/2,r=Math.sqrt(Math.max(s(2)+cx*cx+cy*cy,0));
+ return isFinite(r)&&r>1?{cx,cy,r}:null}
+function minAreaRect(v){let best=null;
+ for(let a=0;a<90;a+=.5){const t=a*Math.PI/180,c=Math.cos(t),si=Math.sin(t);
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const p of v){const x=p.x*c+p.y*si,y=-p.x*si+p.y*c;
+   x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+  const ar=(x1-x0)*(y1-y0);if(!best||ar<best.ar)best={ar,t,x0,y0,x1,y1}}
+ const{t,x0,y0,x1,y1}=best,c=Math.cos(t),si=Math.sin(t),un=(x,y)=>({x:x*c-y*si,y:x*si+y*c});
+ return[un(x0,y0),un(x1,y0),un(x1,y1),un(x0,y1)]}
+const G_=V=>({kind:"graph",V,E:V.map((_,i)=>({a:i,b:(i+1)%V.length}))});
+function bSquare(v){const r=minAreaRect(v),c=mid(r[0],r[2]);
+ const s=(D(r[0],r[1])+D(r[1],r[2]))/2,a=Math.atan2(r[1].y-r[0].y,r[1].x-r[0].x),o=[];
+ for(let i=0;i<4;i++){const t=a+Math.PI/4+i*Math.PI/2;
+  o.push({x:c.x+s/Math.SQRT2*Math.cos(t),y:c.y+s/Math.SQRT2*Math.sin(t)})}return o}
+function bPara(v){const c=centroid(v),d1=mulv(subv(v[0],v[2]),.5),d2=mulv(subv(v[1],v[3]),.5);
+ return[addv(c,d1),addv(c,d2),subv(c,d1),subv(c,d2)]}
+function bRhomb(v){const c=centroid(v),d1=mulv(subv(v[0],v[2]),.5),d2r=mulv(subv(v[1],v[3]),.5);
+ const L1=Math.hypot(d1.x,d1.y)||1,L2=Math.hypot(d2r.x,d2r.y)||1;
+ const pp={x:-d1.y/L1*L2,y:d1.x/L1*L2},sg=(pp.x*d2r.x+pp.y*d2r.y)<0?-1:1,d2=mulv(pp,sg);
+ return[addv(c,d1),addv(c,d2),subv(c,d1),subv(c,d2)]}
+function bTrap(v){const o=v.map(p=>({...p})),pairs=[[0,2],[1,3]];let bi=0,bd=1e9;
+ pairs.forEach(([i,j],k)=>{const a=Math.atan2(o[(i+1)%4].y-o[i].y,o[(i+1)%4].x-o[i].x),
+  b=Math.atan2(o[(j+1)%4].y-o[j].y,o[(j+1)%4].x-o[j].x);
+  let d=Math.abs(dg(Math.atan2(Math.sin(a-b),Math.cos(a-b))));d=Math.min(d,180-d);if(d<bd){bd=d;bi=k}});
+ const[i,j]=pairs[bi],i2=(i+1)%4,j2=(j+1)%4;
+ const a=Math.atan2(o[i2].y-o[i].y,o[i2].x-o[i].x),b=Math.atan2(o[j].y-o[j2].y,o[j].x-o[j2].x);
+ const m=Math.atan2((Math.sin(a)+Math.sin(b))/2,(Math.cos(a)+Math.cos(b))/2);
+ const l1=D(o[i],o[i2]),l2=D(o[j2],o[j]);
+ o[i2]={x:o[i].x+l1*Math.cos(m),y:o[i].y+l1*Math.sin(m)};
+ o[j]={x:o[j2].x+l2*Math.cos(m),y:o[j2].y+l2*Math.sin(m)};return o}
+function bKite(v){for(let k=0;k<4;k++){const o=[v[k],v[(k+1)%4],v[(k+2)%4],v[(k+3)%4]];
+ const ax=subv(o[2],o[0]),L=Math.hypot(ax.x,ax.y)||1,u={x:ax.x/L,y:ax.y/L},nr={x:-u.y,y:u.x};
+ const pr=p=>{const d=subv(p,o[0]);return{t:d.x*u.x+d.y*u.y,q:d.x*nr.x+d.y*nr.y}};
+ const a=pr(o[1]),b=pr(o[3]);if(a.q*b.q>0)continue;
+ const t=(a.t+b.t)/2,q=(Math.abs(a.q)+Math.abs(b.q))/2;
+ return[o[0],{x:o[0].x+u.x*t+nr.x*q,y:o[0].y+u.y*t+nr.y*q},o[2],{x:o[0].x+u.x*t-nr.x*q,y:o[0].y+u.y*t-nr.y*q}]}
+ return v}
+function bReg(v,n){const c=centroid(v),r=v.reduce((a,p)=>a+Math.hypot(p.x-c.x,p.y-c.y),0)/v.length;
+ const a0=Math.atan2(v[0].y-c.y,v[0].x-c.x);
+ const sg=Math.sign((v[1].x-v[0].x)*(v[2].y-v[0].y)-(v[1].y-v[0].y)*(v[2].x-v[0].x))||1,o=[];
+ for(let i=0;i<n;i++){const a=a0+sg*i*2*Math.PI/n;o.push({x:c.x+r*Math.cos(a),y:c.y+r*Math.sin(a)})}return o}
+function bRightTri(v){let bi=0,bd=1e9;
+ for(let i=0;i<3;i++){const a=interior(v[(i+2)%3],v[i],v[(i+1)%3]);if(Math.abs(a-90)<bd){bd=Math.abs(a-90);bi=i}}
+ const A=v[bi],B=v[(bi+1)%3],C=v[(bi+2)%3],u=subv(B,A),L=Math.hypot(u.x,u.y)||1;
+ const un={x:u.x/L,y:u.y/L},nr={x:-un.y,y:un.x},d=subv(C,A),h=d.x*nr.x+d.y*nr.y,o=[];
+ o[bi]=A;o[(bi+1)%3]=B;o[(bi+2)%3]={x:A.x+nr.x*h,y:A.y+nr.y*h};return o}
+function bIsoTri(v){const S=[D(v[0],v[1]),D(v[1],v[2]),D(v[2],v[0])];
+ const pr=[[0,1],[1,2],[0,2]];let bi=0,bd=1e9;
+ pr.forEach(([a,b],k)=>{const d=Math.abs(S[a]-S[b]);if(d<bd){bd=d;bi=k}});
+ const apex=[1,2,0][bi],p=v[apex],q1=v[(apex+1)%3],q2=v[(apex+2)%3];
+ const m=mid(q1,q2),L=(D(p,q1)+D(p,q2))/2,base=D(q1,q2);
+ const h=Math.sqrt(Math.max(L*L-base*base/4,1)),u=subv(q2,q1),ul=Math.hypot(u.x,u.y)||1;
+ const nr={x:-u.y/ul,y:u.x/ul},sg=((p.x-m.x)*nr.x+(p.y-m.y)*nr.y)<0?-1:1,o=[];
+ o[apex]={x:m.x+nr.x*h*sg,y:m.y+nr.y*h*sg};o[(apex+1)%3]=q1;o[(apex+2)%3]=q2;return o}
+function arcPts(cx,cy,r,a0,sw,steps){const o=[];
+ for(let i=0;i<=steps;i++){const a=a0+sw*i/steps;o.push({x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)})}return o}
+function sweepTo(cx,cy,p0,p1,pm){
+ const a0=Math.atan2(p0.y-cy,p0.x-cx),a1=Math.atan2(p1.y-cy,p1.x-cx),am=Math.atan2(pm.y-cy,pm.x-cx);
+ let sw=a1-a0;while(sw<-Math.PI)sw+=2*Math.PI;while(sw>Math.PI)sw-=2*Math.PI;
+ const md=a0+sw/2;
+ if(Math.abs(Math.atan2(Math.sin(am-md),Math.cos(am-md)))>Math.PI/2)sw+=sw>0?-2*Math.PI:2*Math.PI;
+ return{a0,sw}}
+function distTo(p,o){
+ if(o.kind==="path"){let b=1e9;const w=o.pts,n=w.length;
+  for(let i=0;i<n-(o.closed?0:1);i++)b=Math.min(b,segD(p,w[i],w[(i+1)%n]));return b}
+ if(o.kind==="graph"){let b=1e9;for(const e of o.E)b=Math.min(b,segD(p,o.V[e.a],o.V[e.b]));return b}
+ if(o.kind==="ell")return Math.abs(Math.hypot((p.x-o.e.cx)/(o.e.rx||1),(p.y-o.e.cy)/(o.e.ry||1))-1)*((o.e.rx+o.e.ry)/2);
+ if(o.kind==="arc")return Math.abs(Math.hypot(p.x-o.a.cx,p.y-o.a.cy)-o.a.r);
+ if(o.kind==="dot")return D(p,o.c);
+ return 1e6}
+function errf(pts,o,diag){let s=0;for(const q of pts)s+=distTo(q,o);return s/pts.length/Math.max(diag,1)}
+function fitOne(raw){const B=bbox(raw),L=plen(raw);
+ if(B.diag<11||L<14)return{cands:[{n:"point",o:{kind:"dot",c:{x:B.cx,y:B.cy}},e:0}],pts:[{x:B.cx,y:B.cy}]};
+ const p=resample(raw,128),gap=D(p[0],p[127]),closed=gap/L<.24,diag=B.diag,cs=corners(p,closed),C=[];
+ const push=(n,o,pen)=>{if(!o)return;C.push({n,o,e:errf(p,o,diag)+pen*P.bias})};
+ if(closed){const cf=circleFit(p),rx=B.w/2,ry=B.h/2,r=(rx+ry)/2;
+  if(cf){push("circle",{kind:"ell",e:{cx:B.cx,cy:B.cy,rx:r,ry:r}},0);
+   push("oval",{kind:"ell",e:{cx:B.cx,cy:B.cy,rx,ry}},.010)}
+  if(cs.length===2){
+   /* One straight side plus one arc. Split the contour at the two corners and test each half. */
+   const A=[],Bs=[];
+   for(let k=cs[0];k!==cs[1];k=(k+1)%128)A.push(p[k]);A.push(p[cs[1]]);
+   for(let k=cs[1];k!==cs[0];k=(k+1)%128)Bs.push(p[k]);Bs.push(p[cs[0]]);
+   const bend=q=>{if(q.length<4)return 9;const l=pcaLine(q);let m=0;
+    for(const t of q)m+=Math.abs((t.x-l.c.x)*(-l.d.y)+(t.y-l.c.y)*l.d.x);
+    return m/q.length/Math.max(D(q[0],q[q.length-1]),1)};
+   const ba=bend(A),bb=bend(Bs);
+   const curve=ba>bb?A:Bs,line=ba>bb?Bs:A;
+   const cf3=circleFit(curve);
+   if(cf3&&curve.length>5){
+    const l0=pcaLine(line),e0=projL(line[0],l0),e1=projL(line[line.length-1],l0);
+    const sp=sweepTo(cf3.cx,cf3.cy,curve[0],curve[curve.length-1],curve[curve.length>>1]);
+    const pts=arcPts(cf3.cx,cf3.cy,cf3.r,sp.a0,sp.sw,48);
+    push("semicircle",{kind:"path",pts,closed:true},.006);
+    push("arc",{kind:"path",pts,closed:false},.030)}}
+  if(cs.length>=3){const v=refine(p,cs,true),n=v.length;
+   if(n===3){push("triangle",G_(levelSnap(bReg(v,3))),0);push("right triangle",G_(levelSnap(bRightTri(v))),.008);
+    push("isosceles triangle",G_(levelSnap(bIsoTri(v))),.010);push("triangle",G_(levelSnap(v)),.020)}
+   else if(n===4){push("square",G_(levelSnap(bSquare(v))),0);push("rectangle",G_(levelSnap(minAreaRect(v))),.008);
+    push("rhombus",G_(levelSnap(bRhomb(v))),.013);push("parallelogram",G_(levelSnap(bPara(v))),.018);
+    push("trapezoid",G_(levelSnap(bTrap(v))),.026);push("kite",G_(levelSnap(bKite(v))),.028)}
+   else{const nm={5:"pentagon",6:"hexagon",8:"octagon"};
+    for(const k of[n,n-1,n+1])if(nm[k])push(nm[k],G_(levelSnap(bReg(v,k))),k===n?0:.014);
+    push("polygon",G_(levelSnap(v)),.030)}}
+ }else{const cf=circleFit(p);
+  if(cf&&L/Math.max(gap,1)>1.12){const a0=Math.atan2(p[0].y-cf.cy,p[0].x-cf.cx),
+   a1=Math.atan2(p[127].y-cf.cy,p[127].x-cf.cx),am=Math.atan2(p[64].y-cf.cy,p[64].x-cf.cx);
+   let sw=a1-a0;while(sw<-Math.PI)sw+=2*Math.PI;while(sw>Math.PI)sw-=2*Math.PI;
+   const md=a0+sw/2;
+   if(Math.abs(Math.atan2(Math.sin(am-md),Math.cos(am-md)))>Math.PI/2)sw+=sw>0?-2*Math.PI:2*Math.PI;
+   push("arc",{kind:"arc",a:{cx:cf.cx,cy:cf.cy,r:cf.r,a0,sweep:sw}},.004)}
+  const l=pcaLine(p);
+  push("line segment",{kind:"graph",V:levelSnap([projL(p[0],l),projL(p[127],l)]),E:[{a:0,b:1}]},0);
+  const c2=cs.slice();if(c2[0]!==0)c2.unshift(0);if(c2[c2.length-1]!==127)c2.push(127);
+  if(c2.length===3){const v=refine(p,c2,false);
+   push("angle",{kind:"graph",V:v,E:[{a:0,b:1},{a:1,b:2}]},.008);
+   const s1=D(v[0],v[1]),s2=D(v[1],v[2]),fold=interior(v[0],v[1],v[2]);
+   if(s1>s2*2.2&&fold>12&&fold<62)push("arrow",arrowFrom(v[0],v[1],s2),.004)}
+  if(c2.length>3){const v=refine(p,c2,false);
+   push("polyline",{kind:"graph",V:v,E:v.slice(0,-1).map((_,i)=>({a:i,b:i+1}))},.030)}}
+ C.sort((a,b)=>a.e-b.e);return{cands:C,pts:p}}
+function arrowFrom(tail,tip,headLen){
+ const dx=tip.x-tail.x,dy=tip.y-tail.y,L=Math.hypot(dx,dy)||1,u={x:dx/L,y:dy/L};
+ const h=Math.max(9,Math.min(headLen||L*.24,L*.34)),a=26*Math.PI/180;
+ const r=(ang)=>({x:tip.x-(u.x*Math.cos(ang)-u.y*Math.sin(ang))*h,
+                  y:tip.y-(u.x*Math.sin(ang)+u.y*Math.cos(ang))*h});
+ return{kind:"graph",V:[tail,tip,r(a),r(-a)],E:[{a:0,b:1},{a:1,b:2},{a:1,b:3}]}}
+function graphOf(strokes){const segs=[],all=[];
+ for(const s of strokes){const f=fitOne(s);all.push(...f.pts);
+  const t=f.cands.find(c=>c.o.kind==="graph");if(!t)continue;
+  for(const e of t.o.E)segs.push([t.o.V[e.a],t.o.V[e.b]])}
+ if(!segs.length)return null;
+ const diag=bbox(all).diag,wr=Math.max(10,diag*P.weld),V=[],idx=[];
+ const find=p=>{for(let i=0;i<V.length;i++)if(D(p,V[i])<wr)return i;V.push({x:p.x,y:p.y});return V.length-1};
+ for(const s of segs)idx.push([find(s[0]),find(s[1])]);
+ const E=[],seen=new Set();
+ for(const e of idx){if(e[0]===e[1])continue;const k=Math.min(...e)+":"+Math.max(...e);
+  if(seen.has(k))continue;seen.add(k);E.push({a:e[0],b:e[1]})}
+ if(!E.length)return null;
+ const fams=[];
+ for(const e of E){const A=V[e.a],Bv=V[e.b];let an=((Math.atan2(Bv.y-A.y,Bv.x-A.x)%Math.PI)+Math.PI)%Math.PI;
+  let h=-1;for(let i=0;i<fams.length;i++){let d=Math.abs(an-fams[i].m);d=Math.min(d,Math.PI-d);
+   if(d<P.par*Math.PI/180){h=i;break}}
+  if(h<0){fams.push({m:an,l:[]});h=fams.length-1}
+  e.f=h;fams[h].l.push(e);
+  let sx=0,sy=0;for(const q of fams[h].l){const a2=Math.atan2(V[q.b].y-V[q.a].y,V[q.b].x-V[q.a].x)*2;sx+=Math.cos(a2);sy+=Math.sin(a2)}
+  fams[h].m=((Math.atan2(sy,sx)/2)%Math.PI+Math.PI)%Math.PI}
+ for(const f of fams){const ls=f.l.map(e=>D(V[e.a],V[e.b])),m=ls.reduce((a,b)=>a+b,0)/ls.length;
+  const sd=Math.sqrt(ls.reduce((a,x)=>a+(x-m)**2,0)/ls.length);
+  f.len=m;f.uni=sd/m<.32;f.dir={x:Math.cos(f.m),y:Math.sin(f.m)}}
+ for(let it=0;it<8;it++){const acc=V.map(()=>({x:0,y:0,n:0}));
+  for(const e of E){const A=V[e.a],Bv=V[e.b],f=fams[e.f];let d=f.dir;
+   if((Bv.x-A.x)*d.x+(Bv.y-A.y)*d.y<0)d={x:-d.x,y:-d.y};
+   const len=f.uni?f.len:D(A,Bv),m2=mid(A,Bv);
+   acc[e.a].x+=m2.x-d.x*len/2;acc[e.a].y+=m2.y-d.y*len/2;acc[e.a].n++;
+   acc[e.b].x+=m2.x+d.x*len/2;acc[e.b].y+=m2.y+d.y*len/2;acc[e.b].n++}
+  for(let i=0;i<V.length;i++)if(acc[i].n){V[i].x=acc[i].x/acc[i].n;V[i].y=acc[i].y/acc[i].n}}
+ const dgs=V.map(()=>0);for(const e of E){dgs[e.a]++;dgs[e.b]++}
+ return{V,E,fams,deg:dgs,diag}}
+function fitGroup(strokes){
+ if(strokes.length===1)return fitOne(strokes[0]);
+ const all=[];strokes.forEach(s=>all.push(...s));const B=bbox(all);
+ const pts=[];strokes.forEach(s=>pts.push(...resample(s,40)));
+ const C=[];const fits=strokes.map(fitOne);
+ const ellIdx=[];fits.forEach((f,i)=>{if(f.cands[0]&&f.cands[0].o.kind==="ell")ellIdx.push(i)});
+ const ells=ellIdx.map(i=>fits[i].cands[0].o.e);
+ if(ells.length>=2)C.push({n:"cylinder",o:{kind:"solid",name:"cylinder",box:B},e:0});
+ else if(ells.length===1&&fits.length>=2){
+  /* One ellipse plus a body. A cone converges to a point at the far end; a cylinder
+     stays as wide as the ellipse. Measure the width of the body at its far end. */
+  const e0=ells[0],rest=[];
+  strokes.forEach((st,i)=>{if(!ellIdx.includes(i))rest.push(...resample(st,40))});
+  let verdict="both";
+  if(rest.length>3){
+   const far=rest.reduce((a,q)=>D(q,{x:e0.cx,y:e0.cy})>D(a,{x:e0.cx,y:e0.cy})?q:a,rest[0]);
+   const ax={x:far.x-e0.cx,y:far.y-e0.cy},L=Math.hypot(ax.x,ax.y)||1;
+   const u={x:ax.x/L,y:ax.y/L},nr={x:-u.y,y:u.x};
+   let mn=1e9,mx=-1e9,k=0;
+   for(const q of rest){const t=((q.x-e0.cx)*u.x+(q.y-e0.cy)*u.y)/L;
+    if(t>.7){const w=(q.x-e0.cx)*nr.x+(q.y-e0.cy)*nr.y;mn=Math.min(mn,w);mx=Math.max(mx,w);k++}}
+   const farW=k?mx-mn:0,ew=Math.abs(e0.rx)*2;
+   if(farW>ew*.5)verdict="cylinder";else if(farW<ew*.38)verdict="cone"}
+  if(verdict==="cylinder"){C.push({n:"cylinder",o:{kind:"solid",name:"cylinder",box:B},e:0});
+   C.push({n:"cone",o:{kind:"solid",name:"cone",box:B},e:.05})}
+  else if(verdict==="cone"){C.push({n:"cone",o:{kind:"solid",name:"cone",box:B},e:0});
+   C.push({n:"cylinder",o:{kind:"solid",name:"cylinder",box:B},e:.05})}
+  else{C.push({n:"cone",o:{kind:"solid",name:"cone",box:B},e:.02});
+   C.push({n:"cylinder",o:{kind:"solid",name:"cylinder",box:B},e:.02})}
+  C.push({n:"hemisphere",o:{kind:"solid",name:"hemisphere",box:B},e:.06});
+  C.push({n:"sphere",o:{kind:"solid",name:"sphere",box:B},e:.07})}
+
+ /* arrow: a long shaft plus one or two short strokes folding back from one of its ends */
+ if(strokes.length>=2&&strokes.length<=3){
+  const segs2=fits.map(f=>f.cands.find(c=>c.n==="line segment")).map(c=>c&&c.o.V);
+  if(segs2.every(v=>v)){
+   const ord=segs2.map((v,i)=>({v,L:D(v[0],v[1])})).sort((a,b)=>b.L-a.L);
+   const sh=ord[0],hd=ord.slice(1);
+   if(hd.length&&hd.every(h=>h.L<sh.L*.62)){
+    for(const endI of[0,1]){const tip=sh.v[endI],tail=sh.v[1-endI];
+     const near=hd.every(h=>Math.min(D(h.v[0],tip),D(h.v[1],tip))<Math.max(18,sh.L*.3));
+     if(!near)continue;
+     const ok=hd.every(h=>{const o2=D(h.v[0],tip)<D(h.v[1],tip)?h.v[1]:h.v[0];
+      const a=interior(tail,tip,o2);return a>10&&a<70});
+     if(!ok)continue;
+     const hl=hd.reduce((a,h)=>a+h.L,0)/hd.length;
+     C.push({n:"arrow",o:arrowFrom(tail,tip,hl),e:0});break}}}}
+ const g=graphOf(strokes);
+ if(g){const n=g.V.length,m=g.E.length,F=g.fams.length;
+  /* A flat polygon is a simple cycle: edges === vertices and every degree is 2.
+     A box sketch has more edges than vertices and at least one junction of degree 3. */
+  const solidish=m>n&&g.deg.some(d=>d>=3);
+  if(F>=3&&solidish&&n>=5){
+   /* In any correct drawing of a cube the depth edges are foreshortened, so the
+      shortest family is expected to be short. Only the two longest decide cube vs cuboid. */
+   const L=g.fams.slice(0,3).map(f=>f.len).sort((a,b)=>b-a);
+   const cube=(L[0]-L[1])/L[0]<.35;
+   C.push({n:cube?"cube":"cuboid",o:{kind:"solid",name:cube?"cube":"cuboid",box:B,dims:L},e:0});
+   C.push({n:cube?"cuboid":"cube",o:{kind:"solid",name:cube?"cuboid":"cube",box:B,dims:L},e:.03})}
+  if(n===4&&m===6&&g.deg.every(d=>d===3))C.push({n:"tetrahedron",o:{kind:"solid",name:"tetrahedron",box:B},e:0});
+  if(n===6&&m>=11)C.push({n:"octahedron",o:{kind:"solid",name:"octahedron",box:B},e:.01});
+  if(n===6&&m===9&&g.deg.every(d=>d===3))C.push({n:"triangular prism",o:{kind:"solid",name:"triangular prism",box:B},e:0});
+  else if(solidish&&n>=5&&n<=8)C.push({n:"triangular prism",o:{kind:"solid",name:"triangular prism",box:B},e:.045});
+  const ap=g.deg.findIndex(d=>d>=3&&d===n-1);
+  if(ap>=0&&n>=4)C.push({n:"pyramid",o:{kind:"solid",name:"pyramid",box:B},e:.02});
+  C.push({n:"polygon",o:{kind:"graph",V:g.V,E:g.E},e:errf(pts,{kind:"graph",V:g.V,E:g.E},B.diag)+.05*P.bias})}
+ C.sort((a,b)=>a.e-b.e);return{cands:C,pts}}
+
+/* ============ 3D models with faces ============ */
+function edgesFromFaces(F){const s=new Set(),E=[];
+ for(const f of F)for(let i=0;i<f.length;i++){const a=f[i],b=f[(i+1)%f.length];
+  const k=Math.min(a,b)+":"+Math.max(a,b);if(!s.has(k)){s.add(k);E.push([a,b])}}
+ return E}
+function mBox(a,b,c){const V=[];
+ for(let i=0;i<8;i++)V.push({x:(i&1?.5:-.5)*a,y:((i>>1)&1?.5:-.5)*b,z:((i>>2)&1?.5:-.5)*c});
+ const F=[[0,1,3,2],[4,5,7,6],[0,1,5,4],[2,3,7,6],[0,2,6,4],[1,3,7,5]];
+ return{V,F,E:edgesFromFaces(F)}}
+function mTetra(){const s=.62,V=[{x:s,y:s,z:s},{x:s,y:-s,z:-s},{x:-s,y:s,z:-s},{x:-s,y:-s,z:s}];
+ const F=[[0,1,2],[0,1,3],[0,2,3],[1,2,3]];return{V,F,E:edgesFromFaces(F)}}
+function mOcta(){const V=[{x:.72,y:0,z:0},{x:-.72,y:0,z:0},{x:0,y:.72,z:0},{x:0,y:-.72,z:0},{x:0,y:0,z:.72},{x:0,y:0,z:-.72}];
+ const F=[];for(const i of[0,1])for(const j of[2,3])for(const k of[4,5])F.push([i,j,k]);
+ return{V,F,E:edgesFromFaces(F)}}
+function mPyramid(n){const V=[];
+ for(let i=0;i<n;i++){const a=i/n*2*Math.PI+Math.PI/4;V.push({x:.58*Math.cos(a),y:.45,z:.58*Math.sin(a)})}
+ V.push({x:0,y:-.6,z:0});
+ const F=[[...Array(n).keys()]];for(let i=0;i<n;i++)F.push([i,(i+1)%n,n]);
+ return{V,F,E:edgesFromFaces(F)}}
+function mPrism(n){const V=[];
+ for(let s=0;s<2;s++)for(let i=0;i<n;i++){const a=i/n*2*Math.PI-Math.PI/2;
+  V.push({x:.58*Math.cos(a),y:s?.5:-.5,z:.58*Math.sin(a)})}
+ const F=[[...Array(n).keys()],[...Array(n).keys()].map(i=>i+n)];
+ for(let i=0;i<n;i++)F.push([i,(i+1)%n,n+(i+1)%n,n+i]);
+ return{V,F,E:edgesFromFaces(F)}}
+function mCyl(seg){const V=[];
+ for(let s=0;s<2;s++)for(let i=0;i<seg;i++){const a=i/seg*2*Math.PI;
+  V.push({x:.5*Math.cos(a),y:s?.5:-.5,z:.5*Math.sin(a)})}
+ const F=[[...Array(seg).keys()],[...Array(seg).keys()].map(i=>i+seg)];
+ for(let i=0;i<seg;i++)F.push([i,(i+1)%seg,seg+(i+1)%seg,seg+i]);
+ const E=[];
+ for(let s=0;s<2;s++)for(let i=0;i<seg;i++)E.push([s*seg+i,s*seg+(i+1)%seg]);
+ for(let i=0;i<seg;i+=seg/4)E.push([i,seg+i]);
+ return{V,F,E}}
+function mCone(seg){const V=[];
+ for(let i=0;i<seg;i++){const a=i/seg*2*Math.PI;V.push({x:.55*Math.cos(a),y:.5,z:.55*Math.sin(a)})}
+ V.push({x:0,y:-.6,z:0});
+ const F=[[...Array(seg).keys()]];for(let i=0;i<seg;i++)F.push([i,(i+1)%seg,seg]);
+ const E=[];for(let i=0;i<seg;i++)E.push([i,(i+1)%seg]);
+ for(let i=0;i<seg;i+=seg/4)E.push([i,seg]);
+ return{V,F,E}}
+function mSphere(seg){const V=[],E=[];const axes=[[0,1],[1,2],[2,0]];
+ axes.forEach(ax=>{const base=V.length;
+  for(let i=0;i<seg;i++){const a=i/seg*2*Math.PI,c=[0,0,0];
+   c[ax[0]]=.58*Math.cos(a);c[ax[1]]=.58*Math.sin(a);V.push({x:c[0],y:c[1],z:c[2]})}
+  for(let i=0;i<seg;i++)E.push([base+i,base+(i+1)%seg])});
+ return{V,F:[],E}}
+function mHemi(seg){const V=[],E=[];
+ for(let i=0;i<seg;i++){const a=i/seg*2*Math.PI;V.push({x:.58*Math.cos(a),y:0,z:.58*Math.sin(a)})}
+ for(let i=0;i<seg;i++)E.push([i,(i+1)%seg]);
+ const F=[[...Array(seg).keys()]];
+ for(const ax of[0,1]){const base=V.length,half=seg/2;
+  for(let i=0;i<=half;i++){const a=Math.PI+i/half*Math.PI,c={x:0,y:.58*Math.sin(a),z:0};
+   if(ax===0)c.x=.58*Math.cos(a);else c.z=.58*Math.cos(a);V.push(c)}
+  for(let i=0;i<half;i++)E.push([base+i,base+i+1])}
+ return{V,F,E}}
+function modelFor(name,dims){switch(name){
+ case"cube":return mBox(1,1,1);
+ case"cuboid":{const L=(dims||[1.4,1,.7]).slice().sort((a,b)=>b-a),mx=L[0]||1;
+  const cl=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+  /* L[2] is the depth axis, drawn at roughly half length, so scale it back up */
+  return mBox(1.25,cl(L[1]/mx,.35,1)*1.25,cl(L[2]*2/mx,.35,1.6)*1.25)}
+ case"tetrahedron":return mTetra();case"octahedron":return mOcta();
+ case"pyramid":return mPyramid(4);case"triangular prism":return mPrism(3);
+ case"cylinder":return mCyl(24);case"cone":return mCone(24);
+ case"sphere":return mSphere(36);case"hemisphere":return mHemi(24);
+ default:return mBox(1,1,1)}}
+
+/* ============ handwriting: glyph templates + $P point-cloud matcher ============ */
+function ring(cx,cy,rx,ry,n){const o=[];for(let i=0;i<=n;i++){const a=i/n*2*Math.PI;
+ o.push({x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a)})}return o}
+const PL=a=>a.map(p=>({x:p[0],y:p[1]}));
+const GLYPH={
+ A:[PL([[0,1],[.5,0],[1,1]]),PL([[.18,.63],[.82,.63]])],
+ B:[PL([[0,0],[0,1]]),PL([[0,0],[.6,.05],[.72,.25],[.58,.46],[0,.5]]),PL([[0,.5],[.68,.56],[.8,.78],[.62,.97],[0,1]])],
+ C:[PL([[.95,.16],[.6,0],[.2,.16],[.05,.5],[.2,.85],[.6,1],[.95,.84]])],
+ D:[PL([[0,0],[0,1]]),PL([[0,0],[.6,.1],[.82,.5],[.6,.9],[0,1]])],
+ E:[PL([[.95,0],[0,0],[0,1],[.95,1]]),PL([[0,.5],[.7,.5]])],
+ F:[PL([[.95,0],[0,0],[0,1]]),PL([[0,.5],[.7,.5]])],
+ G:[PL([[.95,.16],[.6,0],[.2,.16],[.05,.5],[.2,.85],[.6,1],[.95,.8],[.95,.55],[.55,.55]])],
+ H:[PL([[0,0],[0,1]]),PL([[1,0],[1,1]]),PL([[0,.5],[1,.5]])],
+ I:[PL([[.5,0],[.5,1]])],
+ J:[PL([[.8,0],[.8,.78],[.5,1],[.18,.85]])],
+ K:[PL([[0,0],[0,1]]),PL([[.9,0],[0,.55]]),PL([[.26,.42],[.9,1]])],
+ L:[PL([[0,0],[0,1],[.9,1]])],
+ M:[PL([[0,1],[0,0],[.5,.62],[1,0],[1,1]])],
+ N:[PL([[0,1],[0,0],[1,1],[1,0]])],
+ O:[ring(.5,.5,.48,.5,22)],
+ P:[PL([[0,1],[0,0],[.66,.08],[.78,.3],[.6,.52],[0,.56]])],
+ Q:[ring(.5,.45,.46,.45,22),PL([[.6,.7],[1,1]])],
+ R:[PL([[0,1],[0,0],[.66,.08],[.78,.3],[.6,.52],[0,.56]]),PL([[.3,.56],[.92,1]])],
+ S:[PL([[.9,.16],[.5,0],[.14,.16],[.2,.4],[.76,.6],[.86,.84],[.5,1],[.1,.86]])],
+ T:[PL([[0,0],[1,0]]),PL([[.5,0],[.5,1]])],
+ U:[PL([[0,0],[0,.68],[.3,1],[.7,1],[1,.68],[1,0]])],
+ V:[PL([[0,0],[.5,1],[1,0]])],
+ W:[PL([[0,0],[.25,1],[.5,.35],[.75,1],[1,0]])],
+ X:[PL([[0,0],[1,1]]),PL([[1,0],[0,1]])],
+ Y:[PL([[0,0],[.5,.5],[1,0]]),PL([[.5,.5],[.5,1]])],
+ Z:[PL([[0,0],[1,0],[0,1],[1,1]])],
+ "0":[ring(.5,.5,.38,.5,22)],
+ "1":[PL([[.22,.22],[.5,0],[.5,1]])],
+ "2":[PL([[.08,.22],[.5,0],[.9,.26],[.08,1],[.95,1]])],
+ "3":[PL([[.1,.1],[.5,0],[.86,.24],[.44,.5]]),PL([[.44,.5],[.9,.7],[.6,1],[.1,.9]])],
+ "4":[PL([[.72,0],[.05,.7],[1,.7]]),PL([[.72,.34],[.72,1]])],
+ "5":[PL([[.9,0],[.16,0],[.1,.45],[.5,.4],[.9,.66],[.6,1],[.1,.9]])],
+ "6":[PL([[.85,.05],[.36,.24],[.14,.7],[.45,1],[.8,.85],[.7,.56],[.26,.56]])],
+ "7":[PL([[0,0],[1,0],[.34,1]])],
+ "8":[ring(.5,.26,.32,.26,16),ring(.5,.74,.4,.26,16)],
+ "9":[PL([[.8,.45],[.34,.5],[.2,.2],[.6,.02],[.86,.3],[.76,.76],[.4,1]])],
+ "+":[PL([[.08,.5],[.92,.5]]),PL([[.5,.1],[.5,.9]])],
+ "-":[PL([[.04,.5],[.96,.5]])],
+ "=":[PL([[.04,.34],[.96,.34]]),PL([[.04,.66],[.96,.66]])],
+ "/":[PL([[1,0],[0,1]])],
+ "(":[PL([[.75,0],[.25,.35],[.25,.65],[.75,1]])],
+ ")":[PL([[.25,0],[.75,.35],[.75,.65],[.25,1]])],
+ ".":[ring(.5,.92,.07,.07,8)],
+ ",":[PL([[.55,.85],[.5,1],[.35,1.12]])]
+};
+/* Shapes where upper and lower case differ only in size; decided by x-height. */
+const CASEABLE="COSVWXZPUKJMNY";
+const NPTS=36;
+function cloudify(strokes){
+ const lens=strokes.map(t=>plen(t)),tot=lens.reduce((a,b)=>a+b,0)||1;
+ /* allocate exactly NPTS points across the strokes so every cloud is the same size */
+ const alloc=lens.map(l=>Math.max(2,Math.floor(NPTS*l/tot)));
+ let sum=alloc.reduce((a,b)=>a+b,0),guard=0;
+ while(sum!==NPTS&&guard++<200){let bi=0;
+  for(let i=1;i<alloc.length;i++)if(sum<NPTS?alloc[i]>alloc[bi]:alloc[i]>alloc[bi])bi=i;
+  if(sum<NPTS){alloc[bi]++;sum++}else{if(alloc[bi]<=2)break;alloc[bi]--;sum--}}
+ const pts=[];strokes.forEach((t,i)=>pts.push(...resample(t,alloc[i])));
+ const B=bbox(pts),m=Math.max(B.w,B.h)||1;
+ /* $P normalises to a unit box, not a uniform scale. Clamp so a straight line
+    does not get stretched sideways into nonsense. */
+ const wx=Math.max(B.w,m*.26),wy=Math.max(B.h,m*.26);
+ const norm=pts.map(p=>({x:(p.x-B.cx)/wx,y:(p.y-B.cy)/wy}));
+ let sx=0,sy=0;for(const p of norm){sx+=p.x*p.x;sy+=p.y*p.y}
+ return{pts:norm,aspect:(B.w+.001)/(B.h+.001),
+  sdx:Math.sqrt(sx/norm.length),sdy:Math.sqrt(sy/norm.length),diag:B.diag}}
+const TEMPL=Object.keys(GLYPH).map(k=>({ch:k,...cloudify(GLYPH[k])}));
+function cloudDist(A,Bc){
+ const used=new Array(Bc.length).fill(false);let d=0,n=0;
+ for(const a of A){let bi=-1,bd=1e9;
+  for(let i=0;i<Bc.length;i++){if(used[i])continue;
+   const q=Bc[i],dd=(a.x-q.x)*(a.x-q.x)+(a.y-q.y)*(a.y-q.y);if(dd<bd){bd=dd;bi=i}}
+  if(bi<0)break;used[bi]=true;d+=Math.sqrt(bd);n++}
+ return n?d/n:9}
+const PUNCT="+-=/(),.";
+function recognizeChar(strokes){
+ const c=cloudify(strokes);const rank=[];
+ for(const t of TEMPL){
+  const d=(cloudDist(c.pts,t.pts)+cloudDist(t.pts,c.pts))/2;
+  const ap=Math.abs(Math.log((c.aspect+.08)/(t.aspect+.08)))*.11;
+  const sp=(Math.abs(c.sdx-t.sdx)+Math.abs(c.sdy-t.sdy))*.30;
+  const prior=PUNCT.indexOf(t.ch)>=0?.035:0;   /* letters and digits are far more common */
+  rank.push({ch:t.ch,sc:d+ap+sp+prior})}
+ rank.sort((a,b)=>a.sc-b.sc);
+ return{ch:rank[0].ch,sc:rank[0].sc,alt:rank.slice(1,4).map(r=>r.ch)}}
+
+/* ---- layout: strokes -> lines -> words -> characters ---- */
+function segment(strokes){
+ const items=strokes.map(s=>({s,B:bbox(s)}));
+ const hs=items.map(i=>i.B.h).sort((a,b)=>a-b);
+ const medH=Math.max(hs[hs.length>>1]||20,12);
+ items.sort((a,b)=>a.B.cy-b.B.cy);
+ const lines=[];
+ for(const it of items){
+  let ln=null;
+  for(const L of lines){
+   const ov=Math.min(L.y1,it.B.y1)-Math.max(L.y0,it.B.y0);
+   if(ov>Math.min(L.y1-L.y0,it.B.h)*.32||Math.abs(L.cy-it.B.cy)<medH*.55){ln=L;break}}
+  if(!ln){ln={y0:it.B.y0,y1:it.B.y1,cy:it.B.cy,items:[]};lines.push(ln)}
+  ln.items.push(it);ln.y0=Math.min(ln.y0,it.B.y0);ln.y1=Math.max(ln.y1,it.B.y1);
+  ln.cy=(ln.y0+ln.y1)/2}
+ const out=[];
+ for(const L of lines){
+  L.items.sort((a,b)=>a.B.x0-b.B.x0);
+  const h=Math.max(L.y1-L.y0,14),chars=[];
+  /* Strokes of one letter overlap horizontally; separate letters do not.
+     Overlap is the reliable signal. Gap size only decides word breaks, later. */
+  for(const it of L.items){
+   const last=chars[chars.length-1];
+   if(last){
+    const ov=Math.min(last.B.x1,it.B.x1)-Math.max(last.B.x0,it.B.x0);
+    const narrow=Math.min(last.B.w,it.B.w);
+    const thin=narrow<h*.14;
+    const join=thin?ov>-h*.04:ov>narrow*.28;
+    if(join){last.strokes.push(it.s);last.B=bbox([].concat(...last.strokes));continue}}
+   chars.push({strokes:[it.s],B:it.B})}
+  out.push({chars,y0:L.y0,y1:L.y1,h})}
+ return out}
+/* O and 0 are the same shape. So are I/1, S/5, Z/2, B/8, G/6. The only way to tell
+   is context, so each word votes on whether it is a word or a number. */
+const CONF={O:"0","0":"O",I:"1","1":"I",S:"5","5":"S",Z:"2","2":"Z",B:"8","8":"B",G:"6","6":"G",
+ l:"1",o:"0",s:"5",z:"2"};
+function disambiguate(cells){
+ const words=[];let cur=[];
+ cells.forEach(c=>{if(c.brk&&cur.length){words.push(cur);cur=[]}cur.push(c)});
+ if(cur.length)words.push(cur);
+ let out="";
+ words.forEach((w,i)=>{
+  let dig=0,let_=0;
+  for(const c of w){if(CONF[c.ch])continue;
+   if(c.ch>="0"&&c.ch<="9")dig++;else if(/[A-Za-z]/.test(c.ch))let_++}
+  const wantDigit=dig>let_;
+  const s=w.map(c=>{const f=CONF[c.ch];if(!f)return c.ch;
+   const isDigit=c.ch>="0"&&c.ch<="9";
+   if(wantDigit&&!isDigit)return f;
+   if(!wantDigit&&isDigit&&(let_>0))return f;
+   return c.ch}).join("");
+  out+=(i?" ":"")+s});
+ return out}
+/* ===== Local model inference =====
+   This must mirror hwr_core.py exactly. If the numbers here differ from the ones
+   used in training, accuracy quietly collapses, so it is tested against Python. */
+const HWR = (function () {
+  const PPU = 20;                       // points per unit of ink height (POINTS_PER_UNIT)
+
+  const squash = v => Math.sign(v) * Math.log1p(Math.abs(v));
+
+  function median(a) {
+    const s = a.slice().sort((x, y) => x - y), n = s.length;
+    if (!n) return 0;
+    return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+  }
+
+  function normalize(strokes) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    const ext = [];
+    for (const st of strokes) {
+      let ax = Infinity, ay = Infinity, bx = -Infinity, by = -Infinity;
+      for (const p of st) {
+        ax = Math.min(ax, p[0]); bx = Math.max(bx, p[0]);
+        ay = Math.min(ay, p[1]); by = Math.max(by, p[1]);
+      }
+      ext.push(Math.max(bx - ax, by - ay));
+      x0 = Math.min(x0, ax); x1 = Math.max(x1, bx);
+      y0 = Math.min(y0, ay); y1 = Math.max(y1, by);
+    }
+    const h = Math.max(y1 - y0, 0.5 * median(ext), 1e-6);
+    return strokes.map(st => st.map(p => [(p[0] - x0) / h, (p[1] - y0) / h]));
+  }
+
+  function resample(a, step) {
+    if (a.length < 2) return a.slice(0, 1);
+    const kept = [a[0]];
+    for (let i = 1; i < a.length; i++) {
+      const dx = a[i][0] - a[i - 1][0], dy = a[i][1] - a[i - 1][1];
+      if (Math.sqrt(dx * dx + dy * dy) > 1e-9) kept.push(a[i]);
+    }
+    if (kept.length < 2) return kept.slice(0, 1);
+    const cum = [0];
+    for (let i = 1; i < kept.length; i++) {
+      const dx = kept[i][0] - kept[i - 1][0], dy = kept[i][1] - kept[i - 1][1];
+      cum.push(cum[i - 1] + Math.sqrt(dx * dx + dy * dy));
+    }
+    const L = cum[cum.length - 1], n = Math.max(2, Math.floor(L / step) + 1), out = [];
+    for (let k = 0; k < n; k++) {
+      const t = L * k / (n - 1);
+      let j = 1;
+      while (j < cum.length - 1 && cum[j] < t) j++;
+      const c0 = cum[j - 1], c1 = cum[j], f = c1 > c0 ? (t - c0) / (c1 - c0) : 0;
+      out.push([kept[j - 1][0] + (kept[j][0] - kept[j - 1][0]) * f,
+                kept[j - 1][1] + (kept[j][1] - kept[j - 1][1]) * f]);
+    }
+    return out;
+  }
+
+  function featurize(strokes) {
+    const ns = normalize(strokes.filter(s => s.length)), step = 1 / PPU, feats = [];
+    let prev = null;
+    for (const s of ns) {
+      const r = resample(s, step);
+      for (let i = 0; i < r.length; i++) {
+        const x = r[i][0], y = r[i][1];
+        const dx = prev ? x - prev[0] : 0, dy = prev ? y - prev[1] : 0;
+        feats.push([squash(dx * PPU), squash(dy * PPU), y * 2 - 1, i === 0 ? 1 : 0]);
+        prev = [x, y];
+      }
+    }
+    return feats;
+  }
+
+  function greedy(logProbs, T, C) {          // collapse repeats, drop blank (index 0)
+    const out = [];
+    let prev = 0;
+    for (let t = 0; t < T; t++) {
+      let best = 0, bv = -Infinity;
+      for (let c = 0; c < C; c++) {
+        const v = logProbs[t * C + c];
+        if (v > bv) { bv = v; best = c; }
+      }
+      if (best !== prev && best !== 0) out.push(best);
+      prev = best;
+    }
+    return out;
+  }
+
+  function detokenize(tokens, mode) {
+    if (mode !== "latex") return tokens.join("");
+    let out = "";
+    for (const t of tokens) {
+      if (out && /\\[a-zA-Z]+$/.test(out) && /^[a-zA-Z]/.test(t)) out += " ";
+      out += t;
+    }
+    return out;
+  }
+
+  return { PPU, featurize, greedy, detokenize, normalize, resample, squash };
+})();
+
+if (typeof module !== "undefined" && module.exports) module.exports = HWR;
+
+/* ---- your own trained model, run in this page ---- */
+const ORT_BASE="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
+const LOCAL={sess:null,itos:null,mode:"latex",name:null,onnx:null,vocab:null};
+function loadOrt(){
+ if(window.ort)return Promise.resolve(window.ort);
+ return new Promise((res,rej)=>{const s=document.createElement("script");
+  s.src=ORT_BASE+"ort.min.js";
+  s.onload=()=>{window.ort.env.wasm.wasmPaths=ORT_BASE;res(window.ort)};
+  s.onerror=()=>rej(new Error("Could not load the ONNX runtime. This part needs an internet connection the first time."));
+  document.head.appendChild(s)})}
+async function localBuild(){
+ if(!LOCAL.onnx||!LOCAL.vocab)return;
+ setStatus("Loading your model\u2026");
+ try{
+  const ort=await loadOrt();
+  const v=JSON.parse(LOCAL.vocab);
+  LOCAL.itos=v.itos;LOCAL.mode=v.mode||"latex";
+  LOCAL.sess=await ort.InferenceSession.create(new Uint8Array(LOCAL.onnx),{executionProviders:["wasm"]});
+  $("mdlName").textContent=LOCAL.name+" \u00b7 "+LOCAL.mode+" \u00b7 "+(LOCAL.itos.length-1)+" symbols";
+  msRefresh();setStatus("Your model is loaded. Switch to Write and try it.")}
+ catch(e){LOCAL.sess=null;msRefresh();setStatus("Could not load the model: "+(e.message||e))}}
+async function localRun(strokes){
+ const ort=window.ort,f=HWR.featurize(strokes.map(st=>st.map(p=>[p.x,p.y])));
+ if(!f.length)return"";
+ const T=f.length,flat=new Float32Array(T*4);
+ for(let i=0;i<T;i++)for(let j=0;j<4;j++)flat[i*4+j]=f[i][j];
+ const out=await LOCAL.sess.run({features:new ort.Tensor("float32",flat,[1,T,4])});
+ const lp=out.log_probs,T2=lp.dims[1],C=lp.dims[2];
+ return HWR.detokenize(HWR.greedy(lp.data,T2,C).map(i=>LOCAL.itos[i]),LOCAL.mode)}
+async function localRecognize(strokes,lines,B,lineH){
+ /* maths models read one whole expression; text models read one line at a time */
+ const groups=LOCAL.mode==="latex"?[{strokes,B}]:lines.map(L=>{
+  const all=[].concat(...L.chars.map(c=>c.strokes));return{strokes:all,B:bbox([].concat(...all))}});
+ const t0=performance.now(),out=[];
+ for(const g of groups){
+  const raw=await localRun(g.strokes);
+  if(!raw)continue;
+  const n=Math.max(1,raw.split("\n").length);
+  out.push({text:LOCAL.mode==="latex"?latexToUnicode(raw):raw,
+   latex:LOCAL.mode==="latex"?raw:null,math:LOCAL.mode==="latex",
+   B:g.B,size:Math.max(14,Math.min(lineH*.95,g.B.h/(n*1.16)*1.05))})}
+ setStatus("Read by your model in "+Math.round(performance.now()-t0)+" ms");
+ return out}
+
+/* ================= recognizer: MyScript =================
+   Endpoint and auth follow MyScript's published REST batch API:
+     POST https://cloud.myscript.com/api/v4.0/iink/batch
+     header applicationKey : the application key, as-is
+     header hmac           : HMAC-SHA512 of the exact request body, keyed with
+                             applicationKey + hmacKey, as lowercase hex
+   Without keys, the weak built-in matcher runs so the page stays usable. */
+/* ===================== PASTE YOUR MYSCRIPT KEYS HERE ===================== */
+const MYSCRIPT_API_KEY = "";
+const HMAC_KEY = "";
+/* ========================================================================== */
+
+const MS_URL="https://cloud.myscript.com/api/v4.0/iink/batch";
+let ENGINE="builtin";
+const MS={app:"",hmac:"",type:"Text",lang:"en_US",solve:false};
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function lsDel(k){try{localStorage.removeItem(k)}catch(e){}}
+function monthKey(){const d=new Date();return "ms_count_"+d.getFullYear()+"-"+(d.getMonth()+1)}
+function bumpCount(){const k=monthKey(),n=(+lsGet(k,"0"))+1;lsSet(k,String(n));
+ const e=document.getElementById("msCount");if(e)e.textContent=n;return n}
+
+async function hmacHex(message,key){
+ if(!(window.crypto&&crypto.subtle))
+  throw new Error("This browser blocks the crypto MyScript needs here. Run the page from a local web server.");
+ const enc=new TextEncoder();
+ const k=await crypto.subtle.importKey("raw",enc.encode(key),{name:"HMAC",hash:"SHA-512"},false,["sign"]);
+ const sig=await crypto.subtle.sign("HMAC",k,enc.encode(message));
+ return Array.from(new Uint8Array(sig)).map(b=>b.toString(16).padStart(2,"0")).join("")}
+
+/* Ink is shifted to start near the origin, and timestamps are forced to
+   increase, because coalesced pointer events can share one timestamp. */
+function msPayload(strokes){
+ const all=[].concat(...strokes),B=bbox(all),M=20,ox=B.x0-M,oy=B.y0-M;
+ const groups=strokes.filter(st=>st.length).map(st=>{
+  const x=[],y=[],t=[],p=[];let last=0;
+  st.forEach(q=>{let tt=Math.round(q.t||0);if(!tt)tt=Date.now();
+   if(tt<=last)tt=last+1;last=tt;
+   x.push(Math.round((q.x-ox)*10)/10);y.push(Math.round((q.y-oy)*10)/10);t.push(tt);
+   p.push(typeof q.p==="number"&&q.p>0?Math.round(q.p*100)/100:.5)});
+  if(x.length===1){x.push(x[0]+.5);y.push(y[0]+.5);t.push(t[0]+1);p.push(p[0])}
+  return{x,y,t,p,pointerType:"PEN"}});
+ const conf={lang:MS.lang};
+ if(MS.type==="Math")conf.math={solver:{enable:!!MS.solve}};
+ else conf.text={guides:{enable:false}};
+ return{configuration:conf,xDPI:96,yDPI:96,contentType:MS.type,
+  width:Math.ceil(B.w+2*M),height:Math.ceil(B.h+2*M),strokeGroups:[{strokes:groups}]}}
+
+async function msCall(strokes){
+ if(!MS.app||!MS.hmac)throw new Error("Enter your MyScript keys first.");
+ const body=JSON.stringify(msPayload(strokes));
+ const sig=await hmacHex(body,MS.app+MS.hmac);
+ const accept=MS.type==="Math"?"application/x-latex,application/json"
+                              :"application/vnd.myscript.jiix,application/json";
+ let res;
+ try{res=await fetch(MS_URL,{method:"POST",
+  headers:{"Accept":accept,"Content-Type":"application/json","applicationKey":MS.app,"hmac":sig},body})}
+ catch(e){throw new Error("Could not reach MyScript. If you opened this file by double-clicking it, run it from a local web server instead, and check the internet connection.")}
+ bumpCount();
+ const raw=await res.text();let js=null;try{js=JSON.parse(raw)}catch(e){}
+ if(!res.ok){
+  const why=js&&(js.message||js.code)?(js.message||js.code):raw.slice(0,200);
+  if(res.status===401||res.status===403)
+   throw new Error("Keys rejected ("+res.status+"). Check both keys, or the free monthly quota may be used up. "+why);
+  throw new Error("MyScript error "+res.status+": "+why)}
+ if(MS.type==="Math"){
+  const L=(js&&typeof js.label==="string")?js.label:raw;
+  return{text:latexToUnicode(L).trim(),latex:L.trim(),math:true}}
+ const label=js&&typeof js.label==="string"?js.label:raw;
+ return{text:label.replace(/\r/g,"").trim(),math:false}}
+
+/* LaTeX from MyScript Math, turned into something readable on the board.
+   The raw LaTeX stays on the object. */
+const SUP={"0":"\u2070","1":"\u00b9","2":"\u00b2","3":"\u00b3","4":"\u2074","5":"\u2075","6":"\u2076","7":"\u2077","8":"\u2078","9":"\u2079",
+ "+":"\u207a","-":"\u207b","=":"\u207c","(":"\u207d",")":"\u207e","n":"\u207f","i":"\u2071","a":"\u1d43","b":"\u1d47","c":"\u1d9c","d":"\u1d48",
+ "e":"\u1d49","f":"\u1da0","g":"\u1d4d","h":"\u02b0","j":"\u02b2","k":"\u1d4f","l":"\u02e1","m":"\u1d50","o":"\u1d52","p":"\u1d56","r":"\u02b3",
+ "s":"\u02e2","t":"\u1d57","u":"\u1d58","v":"\u1d5b","w":"\u02b7","x":"\u02e3","y":"\u02b8","z":"\u1dbb","\u2212":"\u207b",
+ "\u00b0":"\u00b0","\u2032":"\u2032"};
+const SUB={"0":"\u2080","1":"\u2081","2":"\u2082","3":"\u2083","4":"\u2084","5":"\u2085","6":"\u2086","7":"\u2087","8":"\u2088","9":"\u2089",
+ "+":"\u208a","-":"\u208b","=":"\u208c","(":"\u208d",")":"\u208e","a":"\u2090","e":"\u2091","o":"\u2092","x":"\u2093","h":"\u2095",
+ "k":"\u2096","l":"\u2097","m":"\u2098","n":"\u2099","p":"\u209a","s":"\u209b","t":"\u209c","i":"\u1d62","j":"\u2c7c","\u2212":"\u208b"};
+const LSYM={times:"\u00d7",div:"\u00f7",cdot:"\u00b7",pm:"\u00b1",mp:"\u2213",leq:"\u2264",le:"\u2264",geq:"\u2265",ge:"\u2265",
+ neq:"\u2260",ne:"\u2260",approx:"\u2248",equiv:"\u2261",infty:"\u221e",pi:"\u03c0",theta:"\u03b8",alpha:"\u03b1",beta:"\u03b2",
+ gamma:"\u03b3",delta:"\u03b4",Delta:"\u0394",lambda:"\u03bb",mu:"\u03bc",sigma:"\u03c3",Sigma:"\u03a3",phi:"\u03c6",omega:"\u03c9",
+ Omega:"\u03a9",epsilon:"\u03b5",rho:"\u03c1",tau:"\u03c4",sum:"\u03a3",prod:"\u220f",int:"\u222b",oint:"\u222e",partial:"\u2202",
+ nabla:"\u2207",rightarrow:"\u2192",to:"\u2192",leftarrow:"\u2190",Rightarrow:"\u21d2",Leftrightarrow:"\u21d4",degree:"\u00b0",
+ circ:"\u00b0",angle:"\u2220",perp:"\u22a5",parallel:"\u2225",therefore:"\u2234",because:"\u2235",in:"\u2208",notin:"\u2209",
+ subset:"\u2282",cup:"\u222a",cap:"\u2229",forall:"\u2200",exists:"\u2203",ldots:"\u2026",cdots:"\u22ef",prime:"\u2032",
+ triangle:"\u25b3",square:"\u25a1","%":"%","{":"{","}":"}","#":"#","&":"&","$":"$"};
+const LFUN=["sin","cos","tan","cot","sec","csc","log","ln","exp","lim","max","min","det","arcsin","arccos","arctan"];
+function latexToUnicode(src){
+ let s=String(src||"");
+ s=s.replace(/\\begin\{[a-zA-Z*]+\}(\{[^}]*\})?/g,"").replace(/\\end\{[a-zA-Z*]+\}/g,"");
+ s=s.replace(/\\\\/g,"\n").replace(/&/g," ").replace(/\\left|\\right/g,"")
+    .replace(/\\(mathrm|mathit|text|operatorname)\s*/g,"");
+ function group(str,i){let d=0,j=i;for(;j<str.length;j++){if(str[j]==="{")d++;else if(str[j]==="}"){d--;if(!d)break}}
+  return[str.slice(i+1,j),j+1]}
+ function arg(str,i){while(str[i]===" ")i++;
+  if(str[i]==="{")return group(str,i);
+  if(str[i]==="\\"){let j=i+1;while(j<str.length&&/[a-zA-Z]/.test(str[j]))j++;if(j===i+1)j++;return[str.slice(i,j),j]}
+  return[str[i]||"",i+1]}
+ const wrap=x=>x.length>1&&!/^[0-9.]+$/.test(x)?"("+x+")":x;
+ function sc(x,map,mark){let o="";for(const ch of x){if(map[ch]===undefined)return mark+(x.length>1?"("+x+")":x);o+=map[ch]}return o}
+ function conv(str){let out="",i=0;
+  while(i<str.length){
+   if(str.startsWith("\\dfrac",i)||str.startsWith("\\frac",i)){i+=str.startsWith("\\dfrac",i)?6:5;
+    let a,b;[a,i]=arg(str,i);[b,i]=arg(str,i);out+=wrap(conv(a))+"/"+wrap(conv(b));continue}
+   if(str.startsWith("\\sqrt",i)){i+=5;let n="";if(str[i]==="["){const j=str.indexOf("]",i);n=str.slice(i+1,j);i=j+1}
+    let a;[a,i]=arg(str,i);out+=(n?sc(conv(n),SUP,"^"):"")+"\u221a"+wrap(conv(a));continue}
+   if(str[i]==="^"){i++;let a;[a,i]=arg(str,i);out+=sc(conv(a),SUP,"^");continue}
+   if(str[i]==="_"){i++;let a;[a,i]=arg(str,i);out+=sc(conv(a),SUB,"_");continue}
+   if(str[i]==="\\"){let j=i+1;while(j<str.length&&/[a-zA-Z]/.test(str[j]))j++;
+    if(j===i+1)j++;const name=str.slice(i+1,j);i=j;
+    if(LSYM[name]!==undefined)out+=LSYM[name];
+    else if(LFUN.includes(name))out+=name;
+    else if([","," ",";",":","quad","qquad"].includes(name))out+=" ";
+    continue}
+   if(str[i]==="{"||str[i]==="}"){i++;continue}
+   out+=str[i];i++}
+  return out}
+ return conv(s).replace(/-/g,"\u2212").replace(/[ \t]+/g," ").replace(/ ?\n ?/g,"\n")}
+
+/* One request per conversion. MyScript handles multi-line text itself, so the
+   whole group goes in a single call rather than one call per line. */
+function recognizeLines(strokes){
+ const all=[].concat(...strokes),B=bbox(all);
+ const lines=segment(strokes),hs=lines.map(L=>L.h).sort((a,b)=>a-b);
+ const lineH=hs.length?hs[hs.length>>1]:Math.max(B.h,20);
+ if(ENGINE==="local")return localRecognize(strokes,lines,B,lineH);
+ if(ENGINE!=="myscript")
+  return Promise.resolve(transcribe(strokes).map(l=>({text:l.text,B:l.B,size:l.size})));
+ return msCall(strokes).then(r=>{
+  const n=Math.max(1,r.text.split("\n").length);
+  const size=Math.max(14,Math.min(lineH*.95,B.h/(n*1.16)*1.05));
+  return[{text:r.text,latex:r.latex,math:r.math,B,size}]})}
+
+function transcribe(strokes){
+ const lines=segment(strokes),res=[];
+ for(const L of lines){
+  const caps=Math.max(...L.chars.map(c=>c.B.h),1);
+  /* A narrow glyph like I or 1 leaves a big empty gap after it that is not a word
+     break, so give every character a minimum advance width before measuring gaps. */
+  const minW=caps*.36;
+  const adv=L.chars.map(c=>{if(c.B.w>=minW)return{x0:c.B.x0,x1:c.B.x1};
+   const cx=(c.B.x0+c.B.x1)/2;return{x0:cx-minW/2,x1:cx+minW/2}});
+  const gaps=[];for(let i=1;i<adv.length;i++)gaps.push(adv[i].x0-adv[i-1].x1);
+  const srt=gaps.filter(g=>g>0).sort((a,b)=>a-b),medG=srt.length?srt[srt.length>>1]:0;
+  const wordGap=Math.max(caps*.40,medG*2.4);
+  const cells=[];
+  L.chars.forEach((c,i)=>{
+   const brk=i>0&&(adv[i].x0-adv[i-1].x1)>wordGap;
+   let ch,alt=[];
+   if(c.B.h<caps*.3&&c.B.w<caps*.34){
+    /* Too small to be a letter. Normalising it would blow a dot up into an O. */
+    ch=c.B.h>c.B.w*1.5?",":(c.B.w>c.B.h*2.2?"-":".")}
+   else{const r=recognizeChar(c.strokes);ch=r.ch;alt=r.alt||[];
+    if(CASEABLE.indexOf(ch)>=0&&c.B.h<caps*.72)ch=ch.toLowerCase()}
+   cells.push({ch,alt,brk})});
+  const txt=disambiguate(cells);
+  const B=bbox([].concat(...L.chars.map(c=>[].concat(...c.strokes))));
+  res.push({text:txt,B,size:caps*1.12})}
+ return res}
+
+/* ============ objects ============ */
+const PAL=["#eef1ff","#4fd6c0","#7cc4ff","#f0b252","#e4718b","#9d8bff","#7ee081","#ff9b6a"];
+let objs=[],nextId=1,SEL=[],faceMode=false,faceColor="#4fd6c0",panelDirty=true;
+function newStyle(){return{color:"#eef1ff",w:3}}
+function newLabels(){return{v:false,e:false,a:false,len:false}}
+function buildPoly(o){
+ const V=[],map=[];
+ const find=p=>{for(let i=0;i<V.length;i++)if(D(p,V[i])<.7)return i;V.push({x:p.x,y:p.y});return V.length-1};
+ const E=[];const seen=new Set();
+ for(const e of o.E){const a=find(o.V[e.a]),b=find(o.V[e.b]);
+  if(a===b)continue;const k=Math.min(a,b)+":"+Math.max(a,b);
+  if(seen.has(k))continue;seen.add(k);E.push([a,b])}
+ const B=bbox(V);V.forEach(p=>{p.x-=B.cx;p.y-=B.cy});
+ return{V,E,lb:{x0:B.x0-B.cx,y0:B.y0-B.cy,x1:B.x1-B.cx,y1:B.y1-B.cy},cx:B.cx,cy:B.cy}}
+function buildCurve(o){const subs=[];
+ if(o.kind==="ell"){const p=[];for(let i=0;i<96;i++){const a=i/96*2*Math.PI;
+  p.push({x:o.e.cx+o.e.rx*Math.cos(a),y:o.e.cy+o.e.ry*Math.sin(a)})}subs.push({pts:p,closed:true})}
+ else if(o.kind==="arc"){const p=[];for(let i=0;i<=72;i++){const a=o.a.a0+o.a.sweep*i/72;
+  p.push({x:o.a.cx+o.a.r*Math.cos(a),y:o.a.cy+o.a.r*Math.sin(a)})}subs.push({pts:p,closed:false})}
+ else if(o.kind==="dot")subs.push({pts:[{...o.c}],closed:false});
+ else subs.push({pts:o.pts.map(p=>({...p})),closed:!!o.closed});
+ const all=[];subs.forEach(s=>all.push(...s.pts));const B=bbox(all);
+ subs.forEach(s=>s.pts.forEach(p=>{p.x-=B.cx;p.y-=B.cy}));
+ return{subs,lb:{x0:B.x0-B.cx,y0:B.y0-B.cy,x1:B.x1-B.cx,y1:B.y1-B.cy},cx:B.cx,cy:B.cy}}
+function makeObj(name,o){
+ if(o.kind==="solid"){const B=o.box,m=modelFor(o.name,o.dims),h=homeRot();
+  const pd=projDiag(m,h);
+  return{id:nextId++,name:o.name,type:"3d",model:m,faces:{},style:newStyle(),labels:newLabels(),
+   t3:{x:B.cx,y:B.cy,scale:B.diag/Math.max(pd,.01),...h}}}
+ if(o.kind==="graph"){const b=buildPoly(o);
+  return{id:nextId++,name,type:"2d",kind:"poly",V:b.V,E:b.E,lb:b.lb,style:newStyle(),labels:newLabels(),
+   t:{x:b.cx,y:b.cy,rot:0,sx:1,sy:1}}}
+ const b=buildCurve(o);
+ return{id:nextId++,name,type:"2d",kind:"curve",subs:b.subs,lb:b.lb,style:newStyle(),labels:newLabels(),
+  t:{x:b.cx,y:b.cy,rot:0,sx:1,sy:1}}}
+const TFONT='600 %dpx "Helvetica Neue",Helvetica,Inter,system-ui,sans-serif';
+const MFONT='500 %dpx "Cambria Math","STIX Two Math","Latin Modern Math","Times New Roman",serif';
+function fontFor(ob){return ob&&ob.math?MFONT:TFONT}
+function textMetrics(txt,size,math){ctx.save();ctx.font=(math?MFONT:TFONT).replace("%d",Math.round(size));
+ const rows=String(txt).split("\n");let w=0;
+ for(const r of rows)w=Math.max(w,ctx.measureText(r).width);
+ ctx.restore();return{w,h:size*1.16*rows.length,rows}}
+function makeText(line){
+ const m=textMetrics(line.text,line.size,line.math),first=m.rows[0]||"";
+ return{id:nextId++,name:(line.math?"maths ":"")+'"'+(first.length>22?first.slice(0,22)+"\u2026":first)+'"',
+  type:"2d",kind:"text",text:line.text,rows:m.rows,latex:line.latex||null,math:!!line.math,fsize:line.size,
+  lb:{x0:-m.w/2,y0:-m.h/2,x1:m.w/2,y1:m.h/2},style:newStyle(),labels:newLabels(),
+  t:{x:line.B.cx,y:line.B.cy,rot:0,sx:1,sy:1}}}
+function L2W(ob,p){const t=ob.t,c=Math.cos(t.rot),s=Math.sin(t.rot);
+ const x=p.x*t.sx,y=p.y*t.sy;return{x:t.x+x*c-y*s,y:t.y+x*s+y*c}}
+function W2U(ob,p){const t=ob.t,c=Math.cos(-t.rot),s=Math.sin(-t.rot);
+ const dx=p.x-t.x,dy=p.y-t.y;return{x:dx*c-dy*s,y:dx*s+dy*c}}
+/* Yaw first, then pitch, then roll. This is what keeps vertical edges vertical. */
+function rot3(v,r){let{x,y,z}=v;
+ let c=Math.cos(r.ry),s=Math.sin(r.ry);let x1=x*c+z*s,z1=-x*s+z*c;x=x1;z=z1;
+ c=Math.cos(r.rx);s=Math.sin(r.rx);let y1=y*c-z*s;z1=y*s+z*c;y=y1;z=z1;
+ c=Math.cos(r.rz);s=Math.sin(r.rz);x1=x*c-y*s;y1=x*s+y*c;return{x:x1,y:y1,z:z1}}
+const OBK=.5*Math.SQRT1_2;                       /* cabinet: half depth at 45 degrees */
+const ISO={rx:.61548,ry:.7854,rz:0},FLAT={rx:0,ry:0,rz:0};
+function homeRot(){return PROJ==="cabinet"?{...FLAT}:{...ISO}}
+function flatten(r){                              /* 3D point -> unscaled screen offset */
+ let x=r.x,y=r.y;
+ if(PROJ==="cabinet"){x+=r.z*OBK;y-=r.z*OBK}
+ const f=PROJ==="perspective"?3/(3+r.z):1;
+ return{x:x*f,y:y*f}}
+function project(ob){const t=ob.t3,out=[];
+ for(const v of ob.model.V){const r=rot3(v,t),q=flatten(r);
+  out.push({x:t.x+q.x*t.scale,y:t.y+q.y*t.scale,z:r.z})}
+ return out}
+function projDiag(model,rot){
+ return bbox(model.V.map(v=>flatten(rot3(v,rot)))).diag}
+function worldPts(ob){
+ if(ob.type==="3d")return project(ob);
+ if(ob.kind==="poly")return ob.V.map(p=>L2W(ob,p));
+ if(ob.kind==="text"){const L=ob.lb;
+  return[{x:L.x0,y:L.y0},{x:L.x1,y:L.y0},{x:L.x1,y:L.y1},{x:L.x0,y:L.y1}].map(p=>L2W(ob,p))}
+ const w=[];for(const s of (ob.subs||[]))for(const p of s.pts)w.push(L2W(ob,p));
+ return w.length?w:[{x:ob.t.x,y:ob.t.y}]}
+function objBox(ob){return bbox(worldPts(ob))}
+function inPoly(p,w){let ins=false;
+ for(let i=0,j=w.length-1;i<w.length;j=i++)
+  if((w[i].y>p.y)!==(w[j].y>p.y)&&p.x<(w[j].x-w[i].x)*(p.y-w[i].y)/(w[j].y-w[i].y)+w[i].x)ins=!ins;
+ return ins}
+function hit(ob,p){
+ if(ob.type==="3d"){const pr=project(ob);
+  for(const e of ob.model.E)if(segD(p,pr[e[0]],pr[e[1]])<12)return true;
+  for(const f of ob.model.F)if(inPoly(p,f.map(i=>pr[i])))return true;
+  return false}
+ if(ob.kind==="text"){const L=ob.lb,c=[{x:L.x0,y:L.y0},{x:L.x1,y:L.y0},{x:L.x1,y:L.y1},{x:L.x0,y:L.y1}]
+   .map(q=>L2W(ob,q));return inPoly(p,c)}
+ if(ob.kind==="poly"){const w=ob.V.map(q=>L2W(ob,q));
+  for(const e of ob.E)if(segD(p,w[e[0]],w[e[1]])<12)return true;
+  if(ob.E.length===ob.V.length&&ob.V.length>2&&inPoly(p,w))return true;
+  return false}
+ for(const s of ob.subs){const w=s.pts.map(q=>L2W(ob,q));
+  if(w.length===1)return D(p,w[0])<12;
+  for(let i=0;i<w.length-(s.closed?0:1);i++)if(segD(p,w[i],w[(i+1)%w.length])<12)return true;
+  if(s.closed&&inPoly(p,w))return true}
+ return false}
+function selBox(){if(!SEL.length)return null;
+ const all=[];SEL.forEach(o=>{const B=objBox(o);all.push({x:B.x0,y:B.y0},{x:B.x1,y:B.y1})});
+ const B=bbox(all);return{x0:B.x0-8,y0:B.y0-8,x1:B.x1+8,y1:B.y1+8,cx:B.cx,cy:B.cy,w:B.w+16,h:B.h+16}}
+function handles(){
+ if(SEL.length!==1)return[];
+ const ob=SEL[0],hs=[];
+ if(ob.type==="2d"){const L=ob.lb;
+  [[L.x0,L.y0,"nw"],[L.x1,L.y0,"ne"],[L.x1,L.y1,"se"],[L.x0,L.y1,"sw"]]
+   .forEach(([x,y,k])=>hs.push({k,type:"scale",p:L2W(ob,{x,y}),lx:x,ly:y}));
+  const top=L2W(ob,{x:(L.x0+L.x1)/2,y:L.y0}),c=L2W(ob,{x:(L.x0+L.x1)/2,y:(L.y0+L.y1)/2});
+  const dx=top.x-c.x,dy=top.y-c.y,dl=Math.hypot(dx,dy)||1;
+  hs.push({type:"rot",p:{x:top.x+dx/dl*26,y:top.y+dy/dl*26}});
+ }else{const B=objBox(ob);
+  [["nw",B.x0,B.y0],["ne",B.x1,B.y0],["se",B.x1,B.y1],["sw",B.x0,B.y1]]
+   .forEach(([k,x,y])=>hs.push({k,type:"scale3",p:{x,y}}));
+  hs.push({type:"rz",p:{x:B.cx,y:B.y0-26}});
+  hs.push({type:"orbit",p:{x:B.cx,y:B.y1+26}})}
+ return hs}
+
+/* ============ panel ============ */
+const swC=$("swColor"),swF=$("swFace");
+PAL.forEach(c=>{const i=document.createElement("i");i.style.background=c;i.dataset.c=c;
+ i.onclick=()=>{SEL.forEach(o=>o.style.color=c);panelDirty=true};swC.append(i)});
+PAL.forEach(c=>{const i=document.createElement("i");i.style.background=c;i.dataset.c=c;
+ i.onclick=()=>{faceColor=c;panelDirty=true};swF.append(i)});
+[["Thin",2],["Medium",3.5],["Thick",6]].forEach(([t,w])=>{const b=document.createElement("button");
+ b.textContent=t;b.dataset.w=w;b.onclick=()=>{SEL.forEach(o=>o.style.w=w);panelDirty=true};$("widths").append(b)});
+[["Vertices","v"],["Edges","e"],["Angles","a"],["Lengths","len"]].forEach(([t,k])=>{
+ const b=document.createElement("button");b.textContent=t;b.dataset.k=k;
+ b.onclick=()=>{const on=!SEL.every(o=>o.labels[k]);SEL.forEach(o=>o.labels[k]=on);panelDirty=true};
+ $("labelChips").append(b)});
+[["Cabinet","cabinet"],["Isometric","isometric"],["Perspective","perspective"]].forEach(([t,k])=>{
+ const b=document.createElement("button");b.textContent=t;b.dataset.p=k;
+ b.onclick=()=>{PROJ=k;objs.forEach(o=>{if(o.type==="3d"){const h=homeRot();
+   o.t3.rx=h.rx;o.t3.ry=h.ry;o.t3.rz=h.rz;
+   o.t3.scale=o.t3.scale*1}});panelDirty=true};
+ $("projChips").append(b)});
+$("faceMode").onclick=()=>{faceMode=!faceMode;panelDirty=true};
+$("faceClear").onclick=()=>{SEL.forEach(o=>{if(o.type==="3d")o.faces={}});panelDirty=true};
+function setSel(list){SEL=list;faceMode=faceMode&&SEL.length===1&&SEL[0].type==="3d";panelDirty=true}
+function syncPanel(){
+ panelDirty=false;
+ const n=SEL.length;$("mSel").textContent=n;
+ $("gNone").classList.toggle("hide",n>0);
+ $("gSel").classList.toggle("hide",n===0);
+ $("gLabels").classList.toggle("hide",n===0);
+ const has3=SEL.some(o=>o.type==="3d");
+ $("gFaces").classList.toggle("hide",!(n===1&&has3&&SEL[0].model.F.length));
+ $("g3d").classList.toggle("hide",!has3);
+ if(!n)return;
+ $("selName").textContent=n===1?SEL[0].name:n+" objects";
+ const col=SEL[0].style.color,w=SEL[0].style.w;
+ swC.querySelectorAll("i").forEach(i=>i.classList.toggle("on",SEL.every(o=>o.style.color===i.dataset.c)));
+ swF.querySelectorAll("i").forEach(i=>i.classList.toggle("on",i.dataset.c===faceColor));
+ $("widths").querySelectorAll("button").forEach(b=>b.classList.toggle("on",SEL.every(o=>o.style.w==+b.dataset.w)));
+ $("labelChips").querySelectorAll("button").forEach(b=>b.classList.toggle("on",SEL.every(o=>o.labels[b.dataset.k])));
+ $("faceMode").classList.toggle("on",faceMode);
+ $("projChips").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.p===PROJ))}
+function dup(){if(!SEL.length)return;const c=SEL.map(o=>{const k=JSON.parse(JSON.stringify(o));k.id=nextId++;
+ if(k.type==="2d"){k.t.x+=26;k.t.y+=26}else{k.t3.x+=26;k.t3.y+=26}objs.push(k);return k});setSel(c);cnt()}
+function del(){objs=objs.filter(o=>!SEL.includes(o));setSel([]);cnt()}
+function resetT(){SEL.forEach(o=>{if(o.type==="2d"){o.t.rot=0;o.t.sx=1;o.t.sy=1}
+ else{const h=homeRot();o.t3.rx=h.rx;o.t3.ry=h.ry;o.t3.rz=h.rz}});panelDirty=true}
+function setStatus(t){const e=$("wStatus");if(e)e.textContent=t}
+[["Text","Text"],["Maths","Math"]].forEach(([lbl,v])=>{const b=document.createElement("button");
+ b.textContent=lbl;b.dataset.v=v;b.onclick=()=>{MS.type=v;lsSet("ms_type",v);msRefresh()};$("msType").append(b)});
+[["English (US)","en_US"],["English (UK)","en_GB"],["Hindi","hi_IN"]].forEach(([lbl,v])=>{
+ const b=document.createElement("button");b.textContent=lbl;b.dataset.v=v;
+ b.onclick=()=>{MS.lang=v;lsSet("ms_lang",v);msRefresh()};$("msLang").append(b)});
+$("msSolve").onchange=e=>{MS.solve=e.target.checked;lsSet("ms_solve",MS.solve?"1":"0")};
+function msRefresh(){
+ ENGINE=LOCAL.sess?"local":((MS.app&&MS.hmac)?"myscript":"builtin");
+ $("engName").textContent=ENGINE==="local"?"your own model (offline)"
+  :ENGINE==="myscript"?"MyScript cloud \u00b7 "+(MS.type==="Math"?"maths":"text"):"NOT connected (weak fallback)";
+ $("engName").style.color=ENGINE==="builtin"?"var(--warn)":"var(--fit)";
+ $("msType").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===MS.type));
+ $("msLang").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===MS.lang));
+ $("msSolve").checked=MS.solve;$("msSolve").disabled=MS.type!=="Math";
+ $("msCount").textContent=lsGet(monthKey(),"0")}
+function msInit(){
+ /* Keys written in the code take priority over keys saved from the panel. */
+ const fromCode=!!(MYSCRIPT_API_KEY.trim()&&HMAC_KEY.trim());
+ MS.app=fromCode?MYSCRIPT_API_KEY.trim():lsGet("ms_app","");
+ MS.hmac=fromCode?HMAC_KEY.trim():lsGet("ms_hmac","");
+ MS.type=lsGet("ms_type","Text");MS.lang=lsGet("ms_lang","en_US");MS.solve=lsGet("ms_solve","0")==="1";
+ $("msApp").value=MS.app;$("msHmac").value=MS.hmac;msRefresh();
+ setStatus(ENGINE==="myscript"
+  ?(fromCode?"Keys loaded from the code. Tap Test keys to confirm they work.":"Keys loaded. Tap Test keys to confirm they work.")
+  :"No keys yet. Paste them into MYSCRIPT_API_KEY and HMAC_KEY in the code, or into the boxes below.")}
+$("msSave").onclick=()=>{MS.app=$("msApp").value.trim();MS.hmac=$("msHmac").value.trim();
+ lsSet("ms_app",MS.app);lsSet("ms_hmac",MS.hmac);msRefresh();
+ setStatus(ENGINE==="myscript"?"Saved. Tap Test keys to check them.":"Both keys are needed.")};
+$("msForget").onclick=()=>{MS.app="";MS.hmac="";lsDel("ms_app");lsDel("ms_hmac");
+ $("msApp").value="";$("msHmac").value="";msRefresh();setStatus("Keys removed from this browser.")};
+$("msTest").onclick=()=>{
+ MS.app=$("msApp").value.trim()||MS.app;MS.hmac=$("msHmac").value.trim()||MS.hmac;msRefresh();
+ if(ENGINE!=="myscript")return setStatus("Enter both keys first.");
+ /* A tiny handwritten "hi" in three strokes. Uses one request. */
+ const t0=Date.now(),mk=(pts,dt)=>pts.map((p,i)=>({x:p[0],y:p[1],t:t0+dt+i*16}));
+ const h=mk([[10,10],[10,30],[10,50],[10,60],[14,48],[22,44],[30,48],[32,60]],0);
+ const i1=mk([[44,40],[44,50],[44,60]],400),i2=mk([[44,26],[45,27]],700);
+ const keep=MS.type;MS.type="Text";setStatus("Testing\u2026");
+ msCall([h,i1,i2]).then(r=>{MS.type=keep;msRefresh();
+   setStatus("Keys work. The test ink was read as \u201c"+(r.text||"(empty)")+"\u201d.")})
+  .catch(e=>{MS.type=keep;msRefresh();setStatus(String(e.message||e))})};
+$("mdlOnnx").onchange=e=>{const f=e.target.files[0];if(!f)return;LOCAL.name=f.name;
+ const r=new FileReader();r.onload=()=>{LOCAL.onnx=r.result;localBuild()};r.readAsArrayBuffer(f)};
+$("mdlVocab").onchange=e=>{const f=e.target.files[0];if(!f)return;
+ const r=new FileReader();r.onload=()=>{LOCAL.vocab=r.result;localBuild()};r.readAsText(f)};
+$("mdlUnload").onclick=()=>{LOCAL.sess=null;LOCAL.onnx=null;LOCAL.vocab=null;
+ $("mdlOnnx").value="";$("mdlVocab").value="";$("mdlName").textContent="not loaded";
+ msRefresh();setStatus("Model unloaded.")};
+
+/* ---- Training samples: your own labelled handwriting, in the notebook's format ---- */
+const SMP_KEY="hwr_samples";
+function smpLoad(){try{return JSON.parse(localStorage.getItem(SMP_KEY)||"[]")}catch(e){return[]}}
+function smpStore(a){try{localStorage.setItem(SMP_KEY,JSON.stringify(a));return true}catch(e){return false}}
+function smpRefresh(){$("smpCount").textContent=smpLoad().length}
+$("smpSave").onclick=()=>{
+ if(!G.s.length)return setStatus(TRIG==="auto"
+  ?"Switch to Manual first. Write, type what you wrote, then click Save as sample before pressing OK."
+  :"Write something first, then click Save as sample.");
+ const label=$("smpLabel").value.trim(),all=smpLoad();
+ all.push({id:"board-"+Date.now(),split:"test",label,
+  strokes:G.s.map(st=>st.map(p=>[Math.round(p.x*10)/10,Math.round(p.y*10)/10,Math.round(p.t||0)]))});
+ if(!smpStore(all))return setStatus("Browser storage is full. Download your samples, then Clear.");
+ G.s=[];okBtn(false);$("smpLabel").value="";smpRefresh();
+ setStatus("Saved sample "+all.length+(label?" \u201c"+label+"\u201d.":" without a label."))};
+$("smpDl").onclick=()=>{const all=smpLoad();if(!all.length)return setStatus("No samples saved yet.");
+ const blob=new Blob([all.map(r=>JSON.stringify(r)).join("\n")+"\n"],{type:"application/json"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="board-samples.jsonl";
+ document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+ setStatus("Downloaded "+all.length+" samples as board-samples.jsonl.")};
+let smpArm=0;
+$("smpClear").onclick=()=>{const b=$("smpClear");
+ if(Date.now()-smpArm>3000){smpArm=Date.now();b.textContent="Click again to delete all";
+  setTimeout(()=>{b.textContent="Clear"},3000);return}
+ smpStore([]);smpRefresh();b.textContent="Clear";smpArm=0;setStatus("Samples cleared.")};
+$("sWSettle").oninput=e=>{WPAUSE=+e.target.value;$("oWSettle").textContent=WPAUSE.toFixed(1)+" s"};
+$("bDup").onclick=dup;$("bDel").onclick=del;$("bReset").onclick=resetT;
+$("bAll").onclick=()=>{setSel(objs.slice());
+ document.querySelectorAll("#tool button").forEach(x=>x.classList.remove("on"));
+ document.querySelector('#tool button[data-k="select"]').classList.add("on");TOOL="select"};
+function cnt(){$("mC").textContent=objs.length}
+
+/* ============ interaction ============ */
+let live=null,drag=null,marquee=null;
+const G={s:[],dl:0};
+function gbox(){const a=[];G.s.forEach(s=>a.push(...s));return a.length?bbox(a):null}
+function commit(){if(!G.s.length)return;
+ const st=G.s.slice();G.s=[];okBtn(false);
+ if(TOOL==="write"){
+  const ghosts=st.map(t=>{const o=makeObj("ink",{kind:"raw",pts:t});
+   o.tmp=true;o.style.color="#8f97c4";objs.push(o);return o});
+  setStatus("Recognising\u2026");
+  recognizeLines(st).then(lines=>{
+   objs=objs.filter(o=>ghosts.indexOf(o)<0);let any=false;
+   lines.forEach(l=>{if(l.text&&l.text.trim()){objs.push(makeText(l));any=true}});
+   if(!any)st.forEach(t=>objs.push(makeObj("ink",{kind:"raw",pts:t})));
+   setStatus(any?"\u2713 "+lines.map(l=>l.latex?l.text+"   [LaTeX: "+l.latex+"]":l.text).join("  /  ").replace(/\n/g," \u23ce "):"Nothing recognised");cnt()})
+  .catch(e=>{objs=objs.filter(o=>ghosts.indexOf(o)<0);
+   st.forEach(t=>objs.push(makeObj("ink",{kind:"raw",pts:t})));
+   setStatus("Error: "+(e.message||e));cnt()});
+  return cnt()}
+ if(MODE==="raw"){st.forEach(s=>objs.push(makeObj("ink",{kind:"raw",pts:s})));return cnt()}
+ const R=fitGroup(st);
+ if(!R.cands.length){st.forEach(s=>objs.push(makeObj("ink",{kind:"raw",pts:s})));return cnt()}
+ let top=R.cands[0];
+ if(MODE==="tidy"){const g=R.cands.find(c=>c.o.kind==="graph");if(g)top=g}
+ const ob=makeObj(top.n,top.o);objs.push(ob);cnt()}
+function okBtn(s){const b=$("ok");if(!s)return b.classList.remove("on");
+ const B=gbox();if(!B)return b.classList.remove("on");
+ $("okn").textContent=G.s.length+(G.s.length>1?" strokes":" stroke");
+ b.style.left=Math.min(W-150,Math.max(8,B.x1-30))+"px";
+ b.style.top=Math.min(H-52,Math.max(8,B.y1+12))+"px";b.classList.add("on")}
+$("ok").onclick=commit;
+function pt(e){const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top,t:Date.now()}}
+function pickFace(ob,p){const pr=project(ob);let best=-1,bz=1e9;
+ ob.model.F.forEach((f,i)=>{const poly=f.map(k=>pr[k]);
+  if(!inPoly(p,poly))return;const z=f.reduce((a,k)=>a+pr[k].z,0)/f.length;
+  if(z<bz){bz=z;best=i}});return best}
+
+cv.addEventListener("pointerdown",e=>{cv.setPointerCapture(e.pointerId);$("hint").style.opacity="0";
+ const p=pt(e);
+ if(TOOL==="select"){
+  if(faceMode&&SEL.length===1&&SEL[0].type==="3d"){const f=pickFace(SEL[0],p);
+   if(f>=0){const o=SEL[0];o.faces[f]=o.faces[f]===faceColor?undefined:faceColor;
+    if(!o.faces[f])delete o.faces[f];return}}
+  for(const h of handles())if(D(p,h.p)<15){startHandle(h,p);return}
+  const B=selBox();
+  if(B&&p.x>B.x0&&p.x<B.x1&&p.y>B.y0&&p.y<B.y1&&!e.shiftKey){
+   drag={mode:"move",start:p,items:SEL.map(o=>({o,x:o.type==="2d"?o.t.x:o.t3.x,y:o.type==="2d"?o.t.y:o.t3.y}))};return}
+  let found=null;for(let i=objs.length-1;i>=0;i--)if(hit(objs[i],p)){found=objs[i];break}
+  if(found){if(e.shiftKey){SEL.includes(found)?setSel(SEL.filter(o=>o!==found)):setSel(SEL.concat(found))}
+   else setSel([found]);
+   drag={mode:"move",start:p,items:SEL.map(o=>({o,x:o.type==="2d"?o.t.x:o.t3.x,y:o.type==="2d"?o.t.y:o.t3.y}))};return}
+  marquee={a:p,b:p,add:e.shiftKey,base:e.shiftKey?SEL.slice():[]};
+  if(!e.shiftKey)setSel([]);
+  return}
+ if(TRIG==="auto"&&TOOL==="draw"&&G.s.length){const B=gbox();
+  if(!(p.x>B.x0-140&&p.x<B.x1+140&&p.y>B.y0-140&&p.y<B.y1+140))commit()}
+ live={pts:[p],id:e.pointerId};okBtn(false)});
+
+function startHandle(h,p){const ob=SEL[0];
+ if(h.type==="rot"||h.type==="rz"){const c=ob.type==="2d"?{x:ob.t.x,y:ob.t.y}:{x:ob.t3.x,y:ob.t3.y};
+  drag={mode:"rot",o:ob,c,a0:Math.atan2(p.y-c.y,p.x-c.x),r0:ob.type==="2d"?ob.t.rot:ob.t3.rz}}
+ else if(h.type==="orbit")drag={mode:"orbit",o:ob,start:p,rx0:ob.t3.rx,ry0:ob.t3.ry};
+ else if(h.type==="scale3")drag={mode:"scale3",o:ob,c:{x:ob.t3.x,y:ob.t3.y},
+  d0:D(p,{x:ob.t3.x,y:ob.t3.y}),s0:ob.t3.scale};
+ else{const L=ob.lb,ax={x:h.lx===L.x0?L.x1:L.x0,y:h.ly===L.y0?L.y1:L.y0};
+  drag={mode:"scale",o:ob,h,anchorL:ax,sx0:ob.t.sx,sy0:ob.t.sy,anchorW:L2W(ob,ax)}}}
+
+cv.addEventListener("pointermove",e=>{const p=pt(e);
+ if(marquee){marquee.b=p;return}
+ if(drag){
+  if(drag.mode==="move"){const dx=p.x-drag.start.x,dy=p.y-drag.start.y;
+   for(const it of drag.items){const T=it.o.type==="2d"?it.o.t:it.o.t3;T.x=it.x+dx;T.y=it.y+dy}}
+  else{const ob=drag.o;
+   if(drag.mode==="rot"){let a=Math.atan2(p.y-drag.c.y,p.x-drag.c.x)-drag.a0+drag.r0;
+    if(P.snapRot){const st=15*Math.PI/180;a=Math.round(a/st)*st}
+    if(ob.type==="2d")ob.t.rot=a;else ob.t3.rz=a}
+   else if(drag.mode==="orbit"){ob.t3.ry=drag.ry0+(p.x-drag.start.x)*.01*P.orbit;
+    ob.t3.rx=drag.rx0+(p.y-drag.start.y)*.01*P.orbit}
+   else if(drag.mode==="scale3")ob.t3.scale=Math.max(4,drag.s0*(D(p,drag.c)/Math.max(drag.d0,1)));
+   else if(drag.mode==="scale"){const u=W2U(ob,p),L=drag.anchorL,h=drag.h;
+    const du=h.lx-L.x,dv=h.ly-L.y;
+    let nsx=Math.abs(du)>1e-3?(u.x-L.x*ob.t.sx)/du:ob.t.sx;
+    let nsy=Math.abs(dv)>1e-3?(u.y-L.y*ob.t.sy)/dv:ob.t.sy;
+    nsx=Math.max(.05,Math.abs(nsx));nsy=Math.max(.05,Math.abs(nsy));
+    if(P.uniform){const k=Math.max(nsx/drag.sx0,nsy/drag.sy0);nsx=drag.sx0*k;nsy=drag.sy0*k}
+    ob.t.sx=nsx;ob.t.sy=nsy;
+    const now=L2W(ob,L);ob.t.x+=drag.anchorW.x-now.x;ob.t.y+=drag.anchorW.y-now.y}}
+  return}
+ if(!live||e.pointerId!==live.id)return;
+ const ev=e.getCoalescedEvents?e.getCoalescedEvents():[e],r=cv.getBoundingClientRect();
+ const tnow=Date.now();
+ for(const q of ev)live.pts.push({x:q.clientX-r.left,y:q.clientY-r.top,t:tnow})});
+
+function up(e){
+ if(marquee){const r=bbox([marquee.a,marquee.b]);
+  const picked=objs.filter(o=>{const B=objBox(o);
+   return !(B.x1<r.x0||B.x0>r.x1||B.y1<r.y0||B.y0>r.y1)});
+  const out=marquee.base.slice();
+  picked.forEach(o=>{if(!out.includes(o))out.push(o)});
+  setSel(out);marquee=null;return}
+ if(drag){drag=null;panelDirty=true;return}
+ if(!live||e.pointerId!==live.id)return;
+ const s=live.pts;live=null;
+ if(s.length<2)s.push({x:s[0].x+.6,y:s[0].y+.6});
+ G.s.push(s);
+ if(TRIG==="auto")G.dl=performance.now()+(TOOL==="write"?WPAUSE*1000:P.settle*1.8);else okBtn(true)}
+cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up);
+addEventListener("keydown",e=>{
+ if(e.key==="Enter"&&G.s.length){e.preventDefault();commit();return}
+ if(!SEL.length)return;
+ const n=e.shiftKey?10:1;
+ const mv=(dx,dy)=>SEL.forEach(o=>{const T=o.type==="2d"?o.t:o.t3;T.x+=dx;T.y+=dy});
+ if(e.key==="ArrowLeft"){mv(-n,0);e.preventDefault()}
+ else if(e.key==="ArrowRight"){mv(n,0);e.preventDefault()}
+ else if(e.key==="ArrowUp"){mv(0,-n);e.preventDefault()}
+ else if(e.key==="ArrowDown"){mv(0,n);e.preventDefault()}
+ else if(e.key==="Delete"||e.key==="Backspace"){del();e.preventDefault()}
+ else if(e.key==="Escape")setSel([])});
+
+/* ============ render ============ */
+function chalk(w,c,a){ctx.lineWidth=w;ctx.strokeStyle=c;ctx.globalAlpha=a==null?1:a;
+ ctx.lineCap="round";ctx.lineJoin="round";ctx.shadowColor=c;ctx.shadowBlur=6}
+function txt(s,x,y,col){ctx.save();ctx.shadowBlur=0;ctx.font="600 13px "+getComputedStyle(document.body).fontFamily;
+ ctx.textAlign="center";ctx.textBaseline="middle";ctx.lineWidth=3.5;ctx.strokeStyle="#1a1c3a";
+ ctx.globalAlpha=1;ctx.strokeText(s,x,y);ctx.fillStyle=col;ctx.fillText(s,x,y);ctx.restore()}
+const LET=i=>String.fromCharCode(65+(i%26));
+function labels2d(ob){const w=ob.V.map(p=>L2W(ob,p)),c=centroid(w),col=ob.style.color,Lb=ob.labels;
+ if(Lb.v)w.forEach((p,i)=>{const dx=p.x-c.x,dy=p.y-c.y,l=Math.hypot(dx,dy)||1;
+  txt(LET(i),p.x+dx/l*15,p.y+dy/l*15,col)});
+ if(Lb.e||Lb.len)ob.E.forEach((e,i)=>{const a=w[e[0]],b=w[e[1]],m=mid(a,b);
+  const dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;let nx=-dy/l,ny=dx/l;
+  if((m.x+nx-c.x)**2+(m.y+ny-c.y)**2<(m.x-c.x)**2+(m.y-c.y)**2){nx=-nx;ny=-ny}
+  const s=(Lb.e?LET(i).toLowerCase():"")+(Lb.e&&Lb.len?" = ":"")+(Lb.len?Math.round(l):"");
+  txt(s,m.x+nx*14,m.y+ny*14,col)});
+ if(Lb.a){const nb=w.map(()=>[]);ob.E.forEach(e=>{nb[e[0]].push(e[1]);nb[e[1]].push(e[0])});
+  w.forEach((p,i)=>{if(nb[i].length!==2)return;
+   const A=w[nb[i][0]],B=w[nb[i][1]],a1=Math.atan2(A.y-p.y,A.x-p.x),a2=Math.atan2(B.y-p.y,B.x-p.x);
+   let d=a2-a1;while(d<-Math.PI)d+=2*Math.PI;while(d>Math.PI)d-=2*Math.PI;
+   const r=Math.max(14,Math.min(D(p,A),D(p,B))*.26);
+   ctx.save();ctx.shadowBlur=0;ctx.globalAlpha=.9;ctx.strokeStyle=col;ctx.lineWidth=1.6;
+   ctx.beginPath();ctx.arc(p.x,p.y,r,a1,a1+d,d<0);ctx.stroke();ctx.restore();
+   const bm=a1+d/2;txt(Math.round(Math.abs(dg(d)))+"\u00b0",p.x+Math.cos(bm)*(r+15),p.y+Math.sin(bm)*(r+15),col)})}}
+function draw2d(ob){const st=ob.style;
+ if(ob.kind==="text"){ctx.save();ctx.translate(ob.t.x,ob.t.y);ctx.rotate(ob.t.rot);
+  ctx.scale(ob.t.sx,ob.t.sy);ctx.font=fontFor(ob).replace("%d",Math.round(ob.fsize));
+  ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle=st.color;
+  ctx.shadowColor=st.color;ctx.shadowBlur=6;
+  const rows=ob.rows||String(ob.text).split("\n"),lh=ob.fsize*1.16;
+  rows.forEach((r,i)=>ctx.fillText(r,0,(i-(rows.length-1)/2)*lh));
+  ctx.restore();return}
+ if(ob.kind==="poly"){const w=ob.V.map(p=>L2W(ob,p));
+  chalk(st.w,st.color,1);
+  for(const e of ob.E){ctx.beginPath();ctx.moveTo(w[e[0]].x,w[e[0]].y);ctx.lineTo(w[e[1]].x,w[e[1]].y);ctx.stroke()}
+  labels2d(ob)}
+ else{chalk(st.w,st.color,1);
+  for(const s of ob.subs){const w=s.pts.map(q=>L2W(ob,q));
+   if(w.length===1){ctx.fillStyle=st.color;ctx.beginPath();ctx.arc(w[0].x,w[0].y,4,0,7);ctx.fill();continue}
+   ctx.beginPath();ctx.moveTo(w[0].x,w[0].y);
+   for(let i=1;i<w.length;i++)ctx.lineTo(w[i].x,w[i].y);
+   if(s.closed)ctx.closePath();ctx.stroke()}}}
+function draw3d(ob){const pr=project(ob),st=ob.style;
+ const F=ob.model.F.map((f,i)=>({f,i,z:f.reduce((a,k)=>a+pr[k].z,0)/f.length}))
+  .filter(o=>ob.faces[o.i]).sort((a,b)=>b.z-a.z);
+ ctx.save();ctx.shadowBlur=0;
+ for(const o of F){ctx.globalAlpha=.42;ctx.fillStyle=ob.faces[o.i];
+  ctx.beginPath();ctx.moveTo(pr[o.f[0]].x,pr[o.f[0]].y);
+  for(let i=1;i<o.f.length;i++)ctx.lineTo(pr[o.f[i]].x,pr[o.f[i]].y);
+  ctx.closePath();ctx.fill()}
+ ctx.restore();
+ let z0=1e9,z1=-1e9;for(const p of pr){z0=Math.min(z0,p.z);z1=Math.max(z1,p.z)}
+ const span=Math.max(z1-z0,.001);
+ for(const e of ob.model.E){const a=pr[e[0]],b=pr[e[1]],t=((a.z+b.z)/2-z0)/span;
+  if(P.depth){ctx.setLineDash(t>.62?[5,5]:[]);chalk(st.w,st.color,1-t*.55)}
+  else{ctx.setLineDash([]);chalk(st.w,st.color,1)}
+  ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}
+ ctx.setLineDash([]);
+ if(ob.labels.v){const c=centroid(pr);
+  pr.forEach((p,i)=>{if(i>25)return;const dx=p.x-c.x,dy=p.y-c.y,l=Math.hypot(dx,dy)||1;
+   txt(LET(i),p.x+dx/l*14,p.y+dy/l*14,st.color)})}
+ if(ob.labels.e)ob.model.E.forEach((e,i)=>{if(i>25)return;const m=mid(pr[e[0]],pr[e[1]]);
+  txt(LET(i).toLowerCase(),m.x,m.y,st.color)})}
+function drawSel(){const B=selBox();if(!B)return;
+ ctx.save();ctx.shadowBlur=0;ctx.globalAlpha=1;ctx.strokeStyle="#7cc4ff";ctx.lineWidth=1;
+ ctx.setLineDash([5,4]);
+ if(SEL.length===1&&SEL[0].type==="2d"){const ob=SEL[0],L=ob.lb;
+  const c=[{x:L.x0,y:L.y0},{x:L.x1,y:L.y0},{x:L.x1,y:L.y1},{x:L.x0,y:L.y1}].map(p=>L2W(ob,p));
+  ctx.beginPath();ctx.moveTo(c[0].x,c[0].y);for(let i=1;i<4;i++)ctx.lineTo(c[i].x,c[i].y);
+  ctx.closePath();ctx.stroke()}
+ else ctx.strokeRect(B.x0,B.y0,B.w,B.h);
+ if(SEL.length>1){ctx.setLineDash([]);ctx.globalAlpha=.5;
+  SEL.forEach(o=>{const b=objBox(o);ctx.strokeRect(b.x0-3,b.y0-3,b.w+6,b.h+6)});ctx.globalAlpha=1}
+ ctx.setLineDash([]);
+ for(const h of handles()){
+  ctx.fillStyle=h.type==="orbit"?"#f0b252":(h.type==="rot"||h.type==="rz")?"#7cc4ff":"#0d1024";
+  ctx.strokeStyle=h.type==="orbit"?"#f0b252":"#7cc4ff";ctx.lineWidth=1.5;ctx.beginPath();
+  if(h.type==="orbit"){ctx.arc(h.p.x,h.p.y,8,.5,5.1);ctx.stroke();
+   ctx.beginPath();ctx.arc(h.p.x,h.p.y,3,0,7);ctx.fill()}
+  else if(h.type==="rot"||h.type==="rz"){ctx.arc(h.p.x,h.p.y,6,0,7);ctx.fill();ctx.stroke()}
+  else{ctx.rect(h.p.x-5,h.p.y-5,10,10);ctx.fill();ctx.stroke()}}
+ ctx.restore()}
+function frame(){try{frameBody()}catch(e){if(!frame.__err){frame.__err=true;console.error("frame error",e)}}
+ requestAnimationFrame(frame)}
+function frameBody(){const now=performance.now();ctx.clearRect(0,0,W,H);
+ ctx.save();ctx.shadowBlur=0;ctx.fillStyle="rgba(255,255,255,.05)";
+ for(let x=32;x<W;x+=32)for(let y=32;y<H;y+=32)ctx.fillRect(x,y,1.2,1.2);ctx.restore();
+ for(const o of objs){try{if(o.type==="2d")draw2d(o);else if(o.type==="3d")draw3d(o)}
+  catch(e){if(!o.__warned){o.__warned=true;console.error("could not draw object",o,e)}}
+  ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.setLineDash([])}
+ if(TOOL==="select")drawSel();
+ if(marquee){const r=bbox([marquee.a,marquee.b]);ctx.save();ctx.shadowBlur=0;
+  ctx.fillStyle="rgba(124,196,255,.10)";ctx.fillRect(r.x0,r.y0,r.w,r.h);
+  ctx.strokeStyle="#7cc4ff";ctx.lineWidth=1;ctx.setLineDash([4,3]);
+  ctx.strokeRect(r.x0,r.y0,r.w,r.h);ctx.restore()}
+ if(G.s.length){chalk(3,"#aab3e0",.95);
+  for(const s of G.s){ctx.beginPath();ctx.moveTo(s[0].x,s[0].y);
+   for(let i=1;i<s.length;i++)ctx.lineTo(s[i].x,s[i].y);ctx.stroke()}
+  if(TOOL==="write"&&ENGINE==="builtin"){
+   /* Show segmentation boxes and the running guess, so a bad result is diagnosable:
+      wrong boxes means segmentation, wrong letters means matching. */
+   ctx.save();ctx.shadowBlur=0;
+   for(const L of segment(G.s)){
+    const caps=Math.max(...L.chars.map(c=>c.B.h),1);
+    for(const c of L.chars){
+     ctx.strokeStyle="rgba(124,196,255,.32)";ctx.lineWidth=1;ctx.setLineDash([3,3]);
+     ctx.strokeRect(c.B.x0-3,c.B.y0-3,c.B.w+6,c.B.h+6);ctx.setLineDash([]);
+     let g;
+     if(c.B.h<caps*.3&&c.B.w<caps*.34)g=c.B.h>c.B.w*1.5?",":(c.B.w>c.B.h*2.2?"-":".");
+     else{g=recognizeChar(c.strokes).ch;
+      if(CASEABLE.indexOf(g)>=0&&c.B.h<caps*.72)g=g.toLowerCase()}
+     ctx.font='600 13px "Helvetica Neue",Helvetica,system-ui,sans-serif';
+     ctx.textAlign="center";ctx.textBaseline="bottom";ctx.fillStyle="#7cc4ff";
+     ctx.fillText(g,(c.B.x0+c.B.x1)/2,c.B.y0-8)}}
+   ctx.restore()}
+  if(TRIG==="auto"&&TOOL!=="select"){const B=gbox(),tot=(TOOL==="write"?WPAUSE*1000:P.settle*1.8),left=Math.max(0,G.dl-now);
+   ctx.save();ctx.shadowBlur=0;ctx.strokeStyle="rgba(255,255,255,.16)";ctx.lineWidth=2.5;
+   ctx.beginPath();ctx.arc(B.x1+20,B.y0-4,12,0,7);ctx.stroke();ctx.strokeStyle="#4fd6c0";
+   ctx.beginPath();ctx.arc(B.x1+20,B.y0-4,12,-Math.PI/2,-Math.PI/2+Math.PI*2*(1-left/tot));
+   ctx.stroke();ctx.restore();if(left<=0)commit()}}
+ if(TOOL==="write"&&ENGINE==="builtin"){
+  /* Never let the weak fallback pass itself off as MyScript. */
+  const msg="MyScript is NOT connected \u2014 this is the weak built-in reader. Add your keys in the Writing panel and click Save keys.";
+  ctx.save();ctx.shadowBlur=0;ctx.globalAlpha=1;
+  ctx.font='600 13px "Helvetica Neue",Helvetica,system-ui,sans-serif';
+  const w=ctx.measureText(msg).width+32,x=Math.max(12,(W-w)/2),y=66;
+  ctx.fillStyle="rgba(240,178,82,.16)";ctx.strokeStyle="#f0b252";ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect?ctx.roundRect(x,y,w,32,8):ctx.rect(x,y,w,32);ctx.fill();ctx.stroke();
+  ctx.fillStyle="#f0b252";ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillText(msg,x+16,y+16);
+  ctx.restore()}
+ if(live){chalk(3,"#eef1ff",1);ctx.beginPath();ctx.moveTo(live.pts[0].x,live.pts[0].y);
+  for(let i=1;i<live.pts.length;i++)ctx.lineTo(live.pts[i].x,live.pts[i].y);ctx.stroke()}
+ ctx.globalAlpha=1;ctx.shadowBlur=0;$("mS").textContent=G.s.length;
+ if(panelDirty)syncPanel()}
+$("bNow").onclick=commit;
+$("bClear").onclick=()=>{objs=[];G.s=[];setSel([]);okBtn(false);cnt();$("hint").style.opacity="1"};
+resize();frame();msInit();smpRefresh();
+})();
+</script>
+</body>
+</html>
