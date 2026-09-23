@@ -14,6 +14,8 @@ body{display:flex}
 #stage{flex:1;position:relative;background:radial-gradient(120% 90% at 30% 10%,#292d57,var(--board) 45%,var(--deep));touch-action:none;overflow:hidden}
 canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
 #bars{position:absolute;left:16px;top:14px;display:flex;flex-wrap:wrap;gap:8px;z-index:6}
+body.norail #rail{display:none}
+@media(max-width:900px){.bar button{padding:9px 12px;font-size:13px}}
 .bar{display:flex;background:#0d0f22d9;border:1px solid var(--rule);backdrop-filter:blur(10px);border-radius:9px;padding:3px;gap:2px}
 .bar button{font-family:inherit;font-size:12.5px;color:var(--dim);background:none;border:none;padding:7px 13px;border-radius:6px;cursor:pointer;white-space:nowrap}
 .bar button.on{background:var(--fit);color:#0d1024;font-weight:600}
@@ -70,6 +72,7 @@ button.b{font-family:inherit;font-size:12.5px;color:var(--chalk);background:#1c1
 <div id="stage">
   <canvas id="cv"></canvas>
   <div id="bars">
+    <div class="bar"><button id="panelBtn">Panel</button></div>
     <div class="bar" id="tool"><button data-k="draw" class="on">Draw</button><button data-k="write">Write</button><button data-k="select" class="s">Select</button></div>
     <div class="bar" id="trigger"><button data-t="auto" class="on">Automatic</button><button data-t="manual">Manual</button></div>
     <div class="bar" id="modes"><button data-m="lib" class="on">Snap to shape</button><button data-m="tidy">Tidy only</button><button data-m="raw">Raw ink</button></div>
@@ -142,7 +145,7 @@ button.b{font-family:inherit;font-size:12.5px;color:var(--chalk);background:#1c1
       <input class="tx" id="mdlOnnx" type="file" accept=".onnx">
       <label class="fl" for="mdlVocab">vocab.json</label>
       <input class="tx" id="mdlVocab" type="file" accept=".json">
-      <div class="btns" style="margin-top:8px"><button class="b" id="mdlUnload">Unload model</button></div>
+      <div class="btns" style="margin-top:8px"><button class="b" id="mdlSite">Load from site</button><button class="b" id="mdlUnload">Unload model</button></div>
       <p class="n">Pick both files from your Drive folder <b>export_mathwriting</b>. Your model then runs here, offline and free, instead of MyScript.</p>
 
       <div class="kvline" style="margin-top:14px"><span>Training samples saved</span><b id="smpCount">0</b></div>
@@ -873,6 +876,11 @@ const MYSCRIPT_API_KEY = "";
 const HMAC_KEY = "";
 /* ========================================================================== */
 
+/* When the page is hosted, the model is fetched from the site so phones need no
+   file picking. Put hwr.onnx and vocab.json in a "model" folder next to index.html. */
+const MODEL_URL = "./model/hwr.onnx";
+const VOCAB_URL = "./model/vocab.json";
+
 const MS_URL="https://cloud.myscript.com/api/v4.0/iink/batch";
 let ENGINE="builtin";
 const MS={app:"",hmac:"",type:"Text",lang:"en_US",solve:false};
@@ -1228,10 +1236,28 @@ $("msTest").onclick=()=>{
  msCall([h,i1,i2]).then(r=>{MS.type=keep;msRefresh();
    setStatus("Keys work. The test ink was read as \u201c"+(r.text||"(empty)")+"\u201d.")})
   .catch(e=>{MS.type=keep;msRefresh();setStatus(String(e.message||e))})};
+$("panelBtn").onclick=()=>{document.body.classList.toggle("norail");
+ setTimeout(resize,60)};                                  /* the canvas must resize with it */
 $("mdlOnnx").onchange=e=>{const f=e.target.files[0];if(!f)return;LOCAL.name=f.name;
  const r=new FileReader();r.onload=()=>{LOCAL.onnx=r.result;localBuild()};r.readAsArrayBuffer(f)};
 $("mdlVocab").onchange=e=>{const f=e.target.files[0];if(!f)return;
  const r=new FileReader();r.onload=()=>{LOCAL.vocab=r.result;localBuild()};r.readAsText(f)};
+async function localFromSite(quiet){
+ if(!/^https?:/.test(location.protocol)){
+  if(!quiet)setStatus("Loading from the site only works when the page is hosted, not opened from a file.");
+  return}
+ try{
+  if(!quiet)setStatus("Fetching the model from this site\u2026");
+  const vr=await fetch(VOCAB_URL,{cache:"force-cache"});
+  if(!vr.ok)throw new Error("no vocab.json on this site");
+  LOCAL.vocab=await vr.text();
+  const mr=await fetch(MODEL_URL,{cache:"force-cache"});
+  if(!mr.ok)throw new Error("no hwr.onnx on this site");
+  LOCAL.onnx=await mr.arrayBuffer();
+  LOCAL.name=MODEL_URL.split("/").pop()+" ("+(LOCAL.onnx.byteLength/1e6).toFixed(1)+" MB)";
+  await localBuild()}
+ catch(e){if(!quiet)setStatus("Could not load a model from this site: "+(e.message||e))}}
+$("mdlSite").onclick=()=>localFromSite(false);
 $("mdlUnload").onclick=()=>{LOCAL.sess=null;LOCAL.onnx=null;LOCAL.vocab=null;
  $("mdlOnnx").value="";$("mdlVocab").value="";$("mdlName").textContent="not loaded";
  msRefresh();setStatus("Model unloaded.")};
@@ -1522,7 +1548,7 @@ function frameBody(){const now=performance.now();ctx.clearRect(0,0,W,H);
  if(panelDirty)syncPanel()}
 $("bNow").onclick=commit;
 $("bClear").onclick=()=>{objs=[];G.s=[];setSel([]);okBtn(false);cnt();$("hint").style.opacity="1"};
-resize();frame();msInit();smpRefresh();
+resize();frame();msInit();smpRefresh();localFromSite(true);   // hosted? load the model automatically
 })();
 </script>
 </body>
