@@ -237,10 +237,10 @@ a.b.dl{text-decoration:none;display:inline-block}
 
     <section class="g" id="gWrite" data-tabs="maths text english chem"><h2>Handwriting engine</h2>
       <div class="kvline"><span>Engine</span><b id="engName">&mdash;</b></div>
-      <div class="kvline"><span>MyScript requests this month</span><b id="msCount">0</b></div>
+      <div class="kvline" data-only="text chem"><span>MyScript requests this month</span><b id="msCount">0</b></div>
       <div class="chips tabhide" id="msType"></div>
       <div class="chips" style="margin-top:8px" id="msLang" data-only="text"></div>
-      <div class="r" style="margin-top:10px" data-only="maths"><input type="checkbox" id="msSolve"><label for="msSolve">Solve maths (MyScript only, adds the answer)</label></div>
+      <div class="r tabhide" style="margin-top:10px" data-only="none"><input type="checkbox" id="msSolve"><label for="msSolve">Solve maths (MyScript only, adds the answer)</label></div>
       <div class="c" style="margin-top:11px"><div class="t"><label for="sWSettle">Pause before converting</label><output id="oWSettle">2.4 s</output></div>
         <input type="range" id="sWSettle" min="0.6" max="6" step="0.2" value="2.4">
         <p class="n">Automatic mode only. In Manual mode nothing converts until you press OK.</p></div>
@@ -1790,6 +1790,7 @@ function recognizeLines(strokes){
  const all=[].concat(...strokes),B=bbox(all);
  const lines=segment(strokes),hs=lines.map(L=>L.h).sort((a,b)=>a-b);
  const lineH=hs.length?hs[hs.length>>1]:Math.max(B.h,20);
+ if(ENGINE==="none")return Promise.reject(new Error("no maths model loaded. Open Models & data and load hwr.onnx + vocab.json"));
  if(ENGINE==="en")return enRecognize(strokes,lines,B,lineH);
  if(ENGINE==="local")return localRecognize(strokes,lines,B,lineH).then(chemPost);
  if(ENGINE!=="myscript")
@@ -1997,10 +1998,11 @@ function setStatus(t){const e=$("wStatus");if(e)e.textContent=t;const m=$("mdlSt
 $("msSolve").onchange=e=>{MS.solve=e.target.checked;lsSet("ms_solve",MS.solve?"1":"0")};
 function msRefresh(){
  const fits=LOCAL.sess&&(MS.type==="Text"?LOCAL.mode!=="latex":LOCAL.mode==="latex");
- ENGINE=(MS.type==="Text"&&EN.sess&&(TAB==="english"||TAB==="text"))?"en":fits?"local":((MS.app&&MS.hmac)?"myscript":"builtin");
- $("engName").textContent=ENGINE==="en"?"your English stroke model (offline)":ENGINE==="local"?"your own "+(LOCAL.mode==="latex"?"maths":"text")+" model (offline)"
+ ENGINE=(MS.type==="Text"&&EN.sess&&(TAB==="english"||TAB==="text"))?"en":fits?"local"
+  :TAB==="maths"?"none":((MS.app&&MS.hmac)?"myscript":"builtin");
+ $("engName").textContent=ENGINE==="none"?"your maths model \u2014 not loaded":ENGINE==="en"?"your English stroke model (offline)":ENGINE==="local"?"your own "+(LOCAL.mode==="latex"?"maths":"text")+" model (offline)"
   :ENGINE==="myscript"?"MyScript cloud \u00b7 "+({Math:"maths",Chem:"chemistry",Text:"text"}[MS.type]||"text"):"NOT connected (weak fallback)";
- $("engName").style.color=ENGINE==="builtin"?"var(--warn)":"var(--fit)";
+ $("engName").style.color=ENGINE==="builtin"||ENGINE==="none"?"var(--warn)":"var(--fit)";
  $("msType").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===MS.type));
  $("msLang").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===MS.lang));
  $("msSolve").checked=MS.solve;$("msSolve").disabled=MS.type!=="Math";
@@ -2439,7 +2441,7 @@ const TAB_INFO={
   tryit:"<b>Try:</b> cube, cuboid, cylinder, cone, sphere (circle + equator), hemisphere, square pyramid, triangular prism, tetrahedron.",
   hint:"Sketch a <em>cube</em>, <em>cylinder</em> or <em>cone</em>, with dashed hidden edges if you like."},
  maths:{title:"Maths writing: handwriting to typed maths",tool:"write",type:"Math",
-  what:"Write an expression and it turns into typed maths, using <b>your own maths model</b>, offline and free. Without that model, MyScript (if keys are set) or a weak built-in matcher is used instead. The status box says which.",
+  what:"Write an expression and it turns into typed maths, using <b>your own maths model</b>, offline and free. Only your model is used here, with no cloud service and no fallback reader, so what you see is exactly how good the model is.",
   steps:["If the status says no maths model, open <b>Models &amp; data</b> and load hwr.onnx + vocab.json.","Write one expression. Fractions, powers, roots and brackets are fine.","Stop writing. It converts after the pause (or press OK in Manual).","To save a training sample: Manual, write, type the exact text in the panel, <b>Save as sample</b>."],
   tryit:"<b>Try:</b> x² + 3x − 4 = 0, ½ + ⅓, √(a²+b²), sin²θ + cos²θ = 1",
   hint:"Write an <em>equation</em>, e.g. x² + 3x − 4 = 0"},
@@ -2474,7 +2476,8 @@ function tabStatus(){
  if(TAB==="shapes"||TAB==="solids"){t=$("cShapeML").checked?shp:"Shape model switched off — rules only";cls=SHAPE.sess&&$("cShapeML").checked?"":"warn"}
  else if(TAB==="maths"||TAB==="chem"||TAB==="text"){
   const want=TAB==="text"?"text":"maths";
-  if(ENGINE==="en"){t="Your English stroke model is loaded \u00b7 offline";cls=""}
+  if(ENGINE==="none"){t="No maths model loaded \u2014 nothing will be converted. Load hwr.onnx + vocab.json in Models & data.";cls="warn"}
+  else if(ENGINE==="en"){t="Your English stroke model is loaded \u00b7 offline";cls=""}
   else if(ENGINE==="local"){t="Your "+want+" model is loaded · offline";cls=""}
   else if(ENGINE==="myscript"){t="No offline "+want+" model — using MyScript cloud";cls="warn"}
   else{t="No "+want+" model loaded — weak built-in matcher only. Load one in Models & data.";cls="warn"}}
@@ -2495,7 +2498,7 @@ function setTab(t){
  $("tSteps").innerHTML=I.steps.map(x=>"<li>"+x+"</li>").join("");
  $("tTry").innerHTML=I.tryit;$("hint").innerHTML=I.hint;
  document.querySelectorAll("[data-tabs]").forEach(e=>e.classList.toggle("tabhide",!e.dataset.tabs.split(" ").includes(t)));
- document.querySelectorAll("[data-only]").forEach(e=>e.classList.toggle("tabhide",e.dataset.only!==t));
+ document.querySelectorAll("[data-only]").forEach(e=>e.classList.toggle("tabhide",!e.dataset.only.split(" ").includes(t)));
  $("railTitle").textContent=({shapes:"2D shapes",solids:"3D solids",maths:"Maths writing",text:"Text writing",english:"English model",chem:"Chemistry",free:"Free ink",models:"Models & data"})[t]+" · settings";
  /* drop half-finished ink so it is not recognised by the wrong feature */
  G.s=[];okBtn(false);$("shapeChip").classList.remove("on");$("chemChip").classList.remove("on");setSel([]);
