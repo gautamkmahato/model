@@ -109,6 +109,9 @@ button.b{font-family:inherit;font-size:12.5px;color:var(--chalk);background:#1c1
 body.nointro #intro{display:none}body.nointro #introShow{display:block}
 #main{flex:1;display:flex;min-height:0}
 .tabhide{display:none!important}
+#enOut .enr{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;padding:9px 11px;border:1px solid var(--rule);border-radius:9px;margin-bottom:7px;font-size:13px}
+#enOut .enr span{color:var(--dim);font-size:11.5px;padding-top:2px}#enOut .enr b{font-weight:500;word-break:break-word}
+#enOut .enr b.chg{color:var(--fit)}
 a.b.dl{text-decoration:none;display:inline-block}
 @media(max-width:900px){#top{height:auto;flex-direction:column;gap:0;padding:8px 10px 0}#brand{padding:0 4px 6px}
  #tabs button{padding:10px 11px}
@@ -123,6 +126,7 @@ a.b.dl{text-decoration:none;display:inline-block}
     <button role="tab" data-tab="solids"><i>&#9707;</i>3D solids</button>
     <button role="tab" data-tab="maths"><i>&#8721;</i>Maths writing</button>
     <button role="tab" data-tab="text"><i>Aa</i>Text writing</button>
+    <button role="tab" data-tab="english"><i>En</i>English model</button>
     <button role="tab" data-tab="chem"><i>&#9883;</i>Chemistry</button>
     <button role="tab" data-tab="free"><i>&#9998;</i>Free ink</button>
     <button role="tab" data-tab="models"><i>&#9881;</i>Models &amp; data</button>
@@ -170,7 +174,7 @@ a.b.dl{text-decoration:none;display:inline-block}
   <div id="rh"><h1 id="railTitle">Settings</h1><p id="railSub">Only the settings for this tab are shown.</p></div>
   <div id="scroll">
 
-    <section class="g" id="gNone" data-tabs="shapes solids maths text chem free"><h2>Nothing selected</h2>
+    <section class="g" id="gNone" data-tabs="shapes solids maths text english chem free"><h2>Nothing selected</h2>
       <p class="n" style="margin-top:0">Tap <b>Select</b> on the board, then drag a box around objects. Shift-click adds one. Drag inside the blue outline to move the selection.</p></section>
 
     <section class="g hide" id="gSel"><h2><span>Selected</span><em id="selName"></em></h2>
@@ -226,7 +230,12 @@ a.b.dl{text-decoration:none;display:inline-block}
       <p class="n">Level snap, regularity and corner settings affect the rule-based fitter, which is also used for exact geometry after the model names the shape.</p>
     </section>
 
-    <section class="g" id="gWrite" data-tabs="maths text chem"><h2>Handwriting engine</h2>
+        <section class="g" data-tabs="english"><h2>What the model read</h2>
+      <div id="enOut"></div>
+      <div class="r" style="margin-top:10px"><input type="checkbox" id="enDict" checked><label for="enDict">Write the dictionary-corrected version on the board</label></div>
+    </section>
+
+    <section class="g" id="gWrite" data-tabs="maths text english chem"><h2>Handwriting engine</h2>
       <div class="kvline"><span>Engine</span><b id="engName">&mdash;</b></div>
       <div class="kvline"><span>MyScript requests this month</span><b id="msCount">0</b></div>
       <div class="chips tabhide" id="msType"></div>
@@ -238,7 +247,18 @@ a.b.dl{text-decoration:none;display:inline-block}
       <p class="n" id="wStatus">&mdash;</p>
     </section>
 
-    <section class="g" data-tabs="maths text chem models"><h2>Training samples</h2>
+
+    <section class="g" data-tabs="english models"><h2>English stroke model (offline)</h2>
+      <div class="kvline"><span>Model</span><b id="enName">not loaded</b></div>
+      <div class="kvline"><span>Dictionary</span><b id="enLex">&mdash;</b></div>
+      <div class="btns" style="margin:8px 0 4px"><a class="b dl" id="dlEnOnnx" download>&#8595; hwr_en.onnx</a><a class="b dl" id="dlEnVocab" download>&#8595; vocab_en.json</a><a class="b dl" id="dlEnWords" download>&#8595; words.txt</a><a class="b dl" id="dlEnDict" download>&#8595; dictionary.json</a></div>
+      <label class="fl" for="enPick">Pick the files (you can select all four at once)</label>
+      <input class="tx" id="enPick" type="file" multiple>
+      <div class="btns" style="margin-top:8px"><button class="b" id="enSite">Load from site</button><button class="b" id="enUnload">Unload</button></div>
+      <p class="n" id="enState">From the Colab folder <b>export_en_brush_run1</b>: hwr_en.onnx and vocab_en.json are needed; words.txt and dictionary.json add spelling correction.</p>
+    </section>
+
+    <section class="g" data-tabs="maths text english chem models"><h2>Training samples</h2>
       <div class="kvline"><span>Samples saved</span><b id="smpCount">0</b></div>
       <label class="fl" for="smpLabel">What you wrote, exactly</label>
       <input class="tx" id="smpLabel" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. x^2+3x-4=0">
@@ -260,7 +280,7 @@ a.b.dl{text-decoration:none;display:inline-block}
       <div class="r" style="margin-top:10px"><input type="checkbox" id="mdlAuto"><label for="mdlAuto">Download from the site automatically when the page opens</label></div>
       <p class="n">On a phone: tap the two &#8595; buttons once, then pick the downloaded files here. The board remembers the model, so later visits load it instantly.</p>
       <p class="n" id="mdlStatus"></p>
-      <p class="n">The maths model (vocab says &ldquo;latex&rdquo;) is used by the Maths and Chemistry tabs. A text model is used by the Text tab.</p>
+      <p class="n">The maths model (vocab says &ldquo;latex&rdquo;) is used by the Maths and Chemistry tabs. The English stroke model has its own section and tab.</p>
     </section>
 
     <section class="g" data-tabs="models"><h2>MyScript cloud (optional, paid)</h2>
@@ -275,7 +295,7 @@ a.b.dl{text-decoration:none;display:inline-block}
       <p class="n">Used only when no offline model fits the tab. Keys are stored only in this browser. Before shipping, move the call to your own server so the HMAC key is never sent to users.</p>
     </section>
 
-    <section class="g" data-tabs="shapes solids maths text chem free models"><h2>Board</h2><div class="btns">
+    <section class="g" data-tabs="shapes solids maths text english chem free models"><h2>Board</h2><div class="btns">
       <button class="b" id="bNow">Convert now</button><button class="b" id="bAll">Select all</button><button class="b" id="bClear">Clear all</button></div></section>
   </div>
 </aside>
@@ -1178,6 +1198,171 @@ async function localRecognize(strokes,lines,B,lineH){
  setStatus("Read by your model in "+Math.round(performance.now()-t0)+" ms");
  return out}
 
+
+/* ============ English stroke model (BRUSH / IAM-OnDB), with dictionary correction ============
+   Files from the Colab export: hwr_en.onnx + vocab_en.json (the model), words.txt + dictionary.json
+   (the dictionary). Kept separate from the maths model so both can be loaded at once. */
+const EN_FILES={onnx:"./hwr_en.onnx",vocab:"./vocab_en.json",words:"./words.txt",dict:"./dictionary.json"};
+const EN={sess:null,itos:null,stoi:null,name:null,onnx:null,vocab:null,words:null,dict:null,lex:null,lam:.3,last:null};
+function enStatus(t){const e=$("enState");if(e)e.textContent=t;setStatus(t)}
+
+/* "Tees , is" -> "Tees, is", the same clean-up the notebook scores with */
+function naturalPunct(t){
+ t=t.replace(/\s+([,.;:!?)\]])/g,"$1").replace(/([(\[])\s+/g,"$1").replace(/\s+(n't|'s|'re|'ve|'ll|'d|'m)\b/g,"$1");
+ const out=[];let opening=true;
+ for(const ch of t){
+  if(ch==='"'){if(!opening&&out.length&&out[out.length-1]===" ")out.pop();out.push(ch);opening=!opening;continue}
+  if(ch===" "&&out.length&&out[out.length-1]==='"'&&!opening)continue;
+  out.push(ch)}
+ return out.join("").replace(/ {2,}/g," ").trim()}
+
+/* ---- dictionary: same rules as lexicon_decode in the notebook ---- */
+function lev(a,b,cap){                        /* edit distance, gives up early once it passes cap */
+ if(Math.abs(a.length-b.length)>cap)return cap+1;
+ let prev=[];for(let j=0;j<=b.length;j++)prev.push(j);
+ for(let i=1;i<=a.length;i++){const cur=[i];let lo=i;
+  for(let j=1;j<=b.length;j++){const v=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]!==b[j-1]?1:0));cur.push(v);if(v<lo)lo=v}
+  if(lo>cap)return cap+1;prev=cur}
+ return prev[b.length]}
+function buildLexicon(text,maxWords){
+ const freq=new Map();
+ for(const line of text.split("\n")){const p=line.trim().split(/\s+/);
+  if(p.length===2&&/^[A-Za-z]+$/.test(p[0]))freq.set(p[0].toLowerCase(),(freq.get(p[0].toLowerCase())||0)+(+p[1]||0))}
+ const top=[...freq.entries()].sort((a,b)=>b[1]-a[1]).slice(0,maxWords||30000);
+ const f=new Map(top);let total=0;for(const v of f.values())total+=v;
+ const byLen=new Map();                          /* candidate words (3+ letters), grouped by length */
+ for(const[w]of top)if(w.length>=3){if(!byLen.has(w.length))byLen.set(w.length,[]);byLen.get(w.length).push(w)}
+ return{freq:f,total,byLen,
+  has(w){return f.has(w)},
+  logPrior(w){return Math.log(((f.get(w)||0)+1)/total)},
+  candidates(w){const out=[];for(let L=w.length-2;L<=w.length+2;L++){const ws=byLen.get(L);if(!ws)continue;
+   for(const c of ws)if(lev(c,w,2)<=2)out.push(c)}return out}}}
+function lse(a,b){if(a===-Infinity)return b;if(b===-Infinity)return a;const m=a>b?a:b;return m+Math.log(Math.exp(a-m)+Math.exp(b-m))}
+function ctcLogLik(lp,C,t0,t1,labels){          /* CTC forward algorithm over frames t0..t1-1 */
+ const T=t1-t0;if(T<=0)return -1e30;
+ const ext=[0];for(const l of labels){ext.push(l);ext.push(0)}
+ const S=ext.length;let alpha=new Array(S).fill(-Infinity);
+ alpha[0]=lp[t0*C+ext[0]];if(S>1)alpha[1]=lp[t0*C+ext[1]];
+ for(let t=1;t<T;t++){const a=new Array(S),row=(t0+t)*C;
+  for(let s=0;s<S;s++){let v=alpha[s];if(s>0)v=lse(v,alpha[s-1]);
+   if(s>1&&ext[s]!==0&&ext[s]!==ext[s-2])v=lse(v,alpha[s-2]);a[s]=v+lp[row+ext[s]]}
+  alpha=a}
+ const r=S>1?lse(alpha[S-1],alpha[S-2]):alpha[S-1];return r===-Infinity?-1e30:r}
+function matchCase(w,like){if(like.length>1&&like===like.toUpperCase())return w.toUpperCase();
+ if(like[0]&&like[0]===like[0].toUpperCase()&&like[0]!==like[0].toLowerCase())return w[0].toUpperCase()+w.slice(1);return w}
+function enDecode(lp,T,C,lam){
+ const chars=[],frames=[];let prev=0;
+ for(let t=0;t<T;t++){let b=0,bv=-Infinity;for(let c=0;c<C;c++){const v=lp[t*C+c];if(v>bv){bv=v;b=c}}
+  if(b!==prev&&b!==0){chars.push(EN.itos[b]);frames.push(t)}prev=b}
+ const plain=chars.join("");
+ if(!EN.lex||!(lam>0))return{plain,fixed:plain};
+ const words=[];let cur=[];
+ chars.forEach((c,i)=>{if(c===" "){if(cur.length){words.push(cur);cur=[]}}else cur.push([c,frames[i]])});
+ if(cur.length)words.push(cur);
+ const pieces=[];let lastEnd=0;
+ words.forEach((wd,k)=>{
+  const text=wd.map(x=>x[0]).join(""),start=lastEnd;
+  const nxt=k+1<words.length?words[k+1][0][1]:T;
+  const end=Math.max(wd[wd.length-1][1]+1,Math.floor((wd[wd.length-1][1]+nxt)/2));lastEnd=end;
+  const m=/^([^A-Za-z]*)([A-Za-z]+)([^A-Za-z]*)$/.exec(text);
+  if(!m||m[2].length<3||EN.lex.has(m[2].toLowerCase())){pieces.push(text);return}
+  const[,pre,core,post]=m;
+  const cands=EN.lex.candidates(core.toLowerCase()).sort((a,b)=>(EN.lex.freq.get(b)||0)-(EN.lex.freq.get(a)||0)).slice(0,60);
+  if(!cands.length){pieces.push(text);return}
+  const enc=s=>[...s].map(ch=>EN.stoi.get(ch)).filter(i=>i!==undefined);
+  const score=(w,prior)=>ctcLogLik(lp,C,start,end,enc(pre+w+post))+lam*prior;
+  let bw=core,bs=score(core,-22);
+  for(const c of cands){const cw=matchCase(c,core),sc=score(cw,EN.lex.logPrior(c));if(sc>bs){bw=cw;bs=sc}}
+  pieces.push(pre+bw+post)});
+ return{plain,fixed:pieces.join(" ")}}
+
+async function enRun(strokes){
+ const ort=window.ort,f=HWR.featurize(strokes.map(st=>st.map(p=>[p.x,p.y])));
+ if(!f.length)return null;
+ const T=f.length,flat=new Float32Array(T*4);
+ for(let i=0;i<T;i++)for(let j=0;j<4;j++)flat[i*4+j]=f[i][j];
+ const out=await EN.sess.run({features:new ort.Tensor("float32",flat,[1,T,4])});
+ const lp=out.log_probs;
+ const r=enDecode(lp.data,lp.dims[1],lp.dims[2],EN.lam);
+ return{plain:naturalPunct(r.plain),fixed:naturalPunct(r.fixed)}}
+async function enRecognize(strokes,lines,B,lineH){
+ const t0=performance.now(),out=[],shown=[];
+ const useDict=$("enDict").checked&&!!EN.lex;
+ for(const L of lines){
+  const all=[].concat(...L.chars.map(c=>c.strokes));
+  const r=await enRun(all);if(!r)continue;
+  const lb=bbox([].concat(...all));
+  shown.push(r);
+  out.push({text:useDict?r.fixed:r.plain,B:lb,size:Math.max(14,Math.min(lineH*.95,lb.h*1.05))})}
+ const ms=Math.round(performance.now()-t0);
+ EN.last={shown,ms};enShowResult();
+ setStatus("Read by your English model in "+ms+" ms");
+ return out}
+function enShowResult(){
+ const box=$("enOut");if(!box)return;
+ if(!EN.last||!EN.last.shown.length){box.innerHTML='<p class="n" style="margin:0">Write a line on the board to see what the model reads.</p>';return}
+ const esc=s=>s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+ box.innerHTML=EN.last.shown.map(r=>'<div class="enr"><span>Model</span><b>'+esc(r.plain||"—")+'</b>'+
+  (EN.lex?'<span>Dictionary</span><b class="'+(r.fixed!==r.plain?"chg":"")+'">'+esc(r.fixed||"—")+'</b>':'')+'</div>').join("")+
+  '<p class="n" style="margin:6px 0 0">'+EN.last.ms+' ms for '+EN.last.shown.length+' line'+(EN.last.shown.length>1?"s":"")+'</p>'}
+
+/* ---- loading: pick files, fetch from the site, or reuse the copy saved in this browser ---- */
+async function enBuild(fromStore){
+ if(!EN.onnx||!EN.vocab){enStatus("Still needed: "+[!EN.onnx&&"hwr_en.onnx",!EN.vocab&&"vocab_en.json"].filter(Boolean).join(" and "));return}
+ try{enStatus("Starting the English model…");
+  const ort=await loadOrt(),v=JSON.parse(EN.vocab);
+  EN.itos=v.itos;EN.stoi=new Map(v.itos.map((t,i)=>[t,i]));
+  EN.sess=await ort.InferenceSession.create(new Uint8Array(EN.onnx),{executionProviders:["wasm"]});
+  EN.lex=EN.words?buildLexicon(EN.words,30000):null;
+  let w=0;try{w=EN.dict?+JSON.parse(EN.dict).dictionary_weight||0:0}catch(e){}
+  EN.lam=w>0?w:.3;EN.lamTuned=w>0;
+  $("enName").textContent=(EN.name||"hwr_en.onnx")+" · "+(EN.itos.length-1)+" characters";
+  $("enLex").textContent=EN.lex?EN.lex.freq.size.toLocaleString()+" words · weight "+EN.lam+(EN.lamTuned?"":" (default)"):"not loaded (words.txt)";
+  msRefresh();tabStatus&&tabStatus();
+  const kept=fromStore?true:await enStore.put({onnx:EN.onnx,vocab:EN.vocab,words:EN.words,dict:EN.dict,name:EN.name});
+  enStatus("English model ready."+(kept?" Saved in this browser for next time.":""))}
+ catch(e){EN.sess=null;msRefresh();enStatus("Could not load the English model: "+(e.message||e))}}
+const enStore={
+ async put(v){try{const db=await modelStore._db();
+  await new Promise((res,rej)=>{const t=db.transaction("model","readwrite");t.objectStore("model").put(v,"english");t.oncomplete=res;t.onerror=()=>rej(t.error)});
+  return true}catch(e){return false}},
+ async get(){try{const db=await modelStore._db();
+  return await new Promise((res,rej)=>{const q=db.transaction("model").objectStore("model").get("english");q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error)})}catch(e){return null}},
+ async clear(){try{const db=await modelStore._db();
+  await new Promise(res=>{const t=db.transaction("model","readwrite");t.objectStore("model").delete("english");t.oncomplete=res;t.onerror=res})}catch(e){}}};
+/* one picker for all four files: each is recognised by its name */
+$("enPick").onchange=async e=>{
+ const files=[...e.target.files];if(!files.length)return;
+ const rd=(f,bin)=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);bin?r.readAsArrayBuffer(f):r.readAsText(f)});
+ for(const f of files){const n=f.name.toLowerCase();
+  if(n.endsWith(".onnx")){EN.onnx=await rd(f,true);EN.name=f.name}
+  else if(n.includes("vocab"))EN.vocab=await rd(f,false);
+  else if(n.endsWith(".txt"))EN.words=await rd(f,false);
+  else if(n.includes("dictionary"))EN.dict=await rd(f,false)}
+ e.target.value="";await enBuild(false)};
+async function enFromSite(quiet){
+ if(!/^https?:/.test(location.protocol)){if(!quiet)enStatus("Loading from the site only works when the page is hosted, not opened from a file.");return}
+ try{const get=async(u,bin,need)=>{const r=await fetch(u,{cache:"force-cache"});
+   if(!r.ok){if(need)throw new Error(u+" gave "+r.status);return null}return bin?r.arrayBuffer():r.text()};
+  if(!quiet)enStatus("Downloading the English model…");
+  EN.vocab=await get(EN_FILES.vocab,false,true);EN.onnx=await get(EN_FILES.onnx,true,true);
+  EN.words=await get(EN_FILES.words,false,false);EN.dict=await get(EN_FILES.dict,false,false);
+  EN.name="hwr_en.onnx ("+(EN.onnx.byteLength/1e6).toFixed(1)+" MB)";await enBuild(false)}
+ catch(e){if(!quiet)enStatus("Could not load the English model from this site: "+(e.message||e))}}
+$("enSite").onclick=()=>enFromSite(false);
+$("enUnload").onclick=async()=>{Object.assign(EN,{sess:null,onnx:null,vocab:null,words:null,dict:null,lex:null,last:null});
+ $("enName").textContent="not loaded";$("enLex").textContent="—";await enStore.clear();msRefresh();enShowResult();
+ enStatus("English model unloaded and removed from this browser.")};
+$("enDict").checked=lsGet("en_dict","1")==="1";
+$("enDict").onchange=e=>lsSet("en_dict",e.target.checked?"1":"0");
+[["dlEnOnnx","onnx"],["dlEnVocab","vocab"],["dlEnWords","words"],["dlEnDict","dict"]].forEach(([id,k])=>{
+ $(id).href=EN_FILES[k];$(id).setAttribute("download",EN_FILES[k].slice(2))});
+async function enStartup(){
+ const s=await enStore.get();
+ if(s&&s.onnx&&s.vocab){Object.assign(EN,{onnx:s.onnx,vocab:s.vocab,words:s.words||null,dict:s.dict||null,name:s.name||"saved model"});
+  await enBuild(true);return}
+ if($("mdlAuto").checked)enFromSite(true)}
+
 /* ===== Chemistry: read a recognised equation, check it, balance it =====
    Input is the LaTeX the maths model produces, e.g. C_{3}H_{8}+O_{2}\rightarrow CO_{2}+H_{2}O */
 const Chem = (function () {
@@ -1605,6 +1790,7 @@ function recognizeLines(strokes){
  const all=[].concat(...strokes),B=bbox(all);
  const lines=segment(strokes),hs=lines.map(L=>L.h).sort((a,b)=>a-b);
  const lineH=hs.length?hs[hs.length>>1]:Math.max(B.h,20);
+ if(ENGINE==="en")return enRecognize(strokes,lines,B,lineH);
  if(ENGINE==="local")return localRecognize(strokes,lines,B,lineH).then(chemPost);
  if(ENGINE!=="myscript")
   return Promise.resolve(transcribe(strokes).map(l=>({text:l.text,B:l.B,size:l.size})));
@@ -1811,8 +1997,8 @@ function setStatus(t){const e=$("wStatus");if(e)e.textContent=t;const m=$("mdlSt
 $("msSolve").onchange=e=>{MS.solve=e.target.checked;lsSet("ms_solve",MS.solve?"1":"0")};
 function msRefresh(){
  const fits=LOCAL.sess&&(MS.type==="Text"?LOCAL.mode!=="latex":LOCAL.mode==="latex");
- ENGINE=fits?"local":((MS.app&&MS.hmac)?"myscript":"builtin");
- $("engName").textContent=ENGINE==="local"?"your own "+(LOCAL.mode==="latex"?"maths":"text")+" model (offline)"
+ ENGINE=(MS.type==="Text"&&EN.sess&&(TAB==="english"||TAB==="text"))?"en":fits?"local":((MS.app&&MS.hmac)?"myscript":"builtin");
+ $("engName").textContent=ENGINE==="en"?"your English stroke model (offline)":ENGINE==="local"?"your own "+(LOCAL.mode==="latex"?"maths":"text")+" model (offline)"
   :ENGINE==="myscript"?"MyScript cloud \u00b7 "+({Math:"maths",Chem:"chemistry",Text:"text"}[MS.type]||"text"):"NOT connected (weak fallback)";
  $("engName").style.color=ENGINE==="builtin"?"var(--warn)":"var(--fit)";
  $("msType").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===MS.type));
@@ -2262,6 +2448,11 @@ const TAB_INFO={
   steps:["Check the status box to see which engine will read your writing.","Write a word or a short sentence. Several lines are fine.","Stop writing. It converts after the pause (or press OK in Manual).","Wrong? Use Manual + <b>Save as sample</b> to collect examples for training."],
   tryit:"<b>Try:</b> “Newton’s laws of motion”, “velocity”, “The quick brown fox”",
   hint:"Write a <em>word</em> or a short <em>sentence</em>."},
+ english:{title:"English model: test the new stroke model trained on BRUSH",tool:"write",type:"Text",
+  what:"Tests <b>only</b> the English model you trained in Colab (export_en_brush_run1). Each line you write is read twice: what the model itself reads, and the <b>dictionary-corrected</b> version that fixes near-miss spellings. Both appear in the panel, with the time taken. Runs offline in this browser.",
+  steps:["Load the model once: <b>Load from site</b> (after uploading the 4 files next to index.html) or pick the files in the panel.","Write one or more lines of English. Leave a clear gap between lines.","Stop writing. It reads after the pause (or press OK in Manual).","Compare <b>Model</b> and <b>Dictionary</b> in the panel. To collect training data: Manual, write, type the exact text, <b>Save as sample</b>."],
+  tryit:"<b>Try:</b> \u201chello my name is\u201d, \u201cPending objects\u201d, \u201cNewton\u2019s laws of motion\u201d, \u201cvelocity and acceleration\u201d",
+  hint:"Write a <em>line of English</em>. Each line is read on its own."},
  chem:{title:"Chemistry: write an equation, check and balance it",tool:"write",type:"Chem",
   what:"Write a chemical equation. It is read with the maths model, cleaned up (formulas, charges, arrows, common misreads like 0 for O), and checked. If it is not balanced, a <b>Balance</b> chip offers the correctly balanced equation.",
   steps:["Needs the maths model (see the status). Load it in <b>Models &amp; data</b> if missing.","Write the equation with an arrow, e.g. H₂ + O₂ → H₂O.","Stop writing. It converts after the pause (or press OK in Manual).","Tap <b>Balance</b> on the chip to replace it with 2H₂ + O₂ → 2H₂O."],
@@ -2283,9 +2474,13 @@ function tabStatus(){
  if(TAB==="shapes"||TAB==="solids"){t=$("cShapeML").checked?shp:"Shape model switched off — rules only";cls=SHAPE.sess&&$("cShapeML").checked?"":"warn"}
  else if(TAB==="maths"||TAB==="chem"||TAB==="text"){
   const want=TAB==="text"?"text":"maths";
-  if(ENGINE==="local"){t="Your "+want+" model is loaded · offline";cls=""}
+  if(ENGINE==="en"){t="Your English stroke model is loaded \u00b7 offline";cls=""}
+  else if(ENGINE==="local"){t="Your "+want+" model is loaded · offline";cls=""}
   else if(ENGINE==="myscript"){t="No offline "+want+" model — using MyScript cloud";cls="warn"}
   else{t="No "+want+" model loaded — weak built-in matcher only. Load one in Models & data.";cls="warn"}}
+ else if(TAB==="english"){
+  if(EN.sess){t="English model loaded \u00b7 offline"+(EN.lex?" \u00b7 dictionary on":" \u00b7 no dictionary (words.txt)");cls=""}
+  else{t="English model not loaded \u2014 use the panel: Load from site, or pick the files";cls="warn"}}
  else if(TAB==="free"){t="No recognition in this tab";cls="off"}
  else{t=shp+" · handwriting: "+(LOCAL.sess?LOCAL.name:"not loaded");cls=SHAPE.sess?"":"warn"}
  if(st.textContent!==t)st.textContent=t;st.className="pill"+(cls?" "+cls:"")}
@@ -2301,7 +2496,7 @@ function setTab(t){
  $("tTry").innerHTML=I.tryit;$("hint").innerHTML=I.hint;
  document.querySelectorAll("[data-tabs]").forEach(e=>e.classList.toggle("tabhide",!e.dataset.tabs.split(" ").includes(t)));
  document.querySelectorAll("[data-only]").forEach(e=>e.classList.toggle("tabhide",e.dataset.only!==t));
- $("railTitle").textContent=({shapes:"2D shapes",solids:"3D solids",maths:"Maths writing",text:"Text writing",chem:"Chemistry",free:"Free ink",models:"Models & data"})[t]+" · settings";
+ $("railTitle").textContent=({shapes:"2D shapes",solids:"3D solids",maths:"Maths writing",text:"Text writing",english:"English model",chem:"Chemistry",free:"Free ink",models:"Models & data"})[t]+" · settings";
  /* drop half-finished ink so it is not recognised by the wrong feature */
  G.s=[];okBtn(false);$("shapeChip").classList.remove("on");$("chemChip").classList.remove("on");setSel([]);
  PEN_TOOL=I.tool;TOOL=I.tool;
@@ -2310,7 +2505,7 @@ function setTab(t){
  if(t==="free"){MODE=lsGet("free_mode","raw");if(MODE==="lib")MODE="raw"}else MODE="lib";
  $("modes").classList.toggle("hide",t!=="free");
  document.querySelectorAll("#modes button").forEach(b=>{b.classList.toggle("on",b.dataset.m===MODE);if(b.dataset.m==="lib")b.classList.add("hide")});
- if(I.type){MS.type=I.type;lsSet("ms_type",I.type);msRefresh()}
+ if(I.type){MS.type=I.type;lsSet("ms_type",I.type)}msRefresh();if(t==="english")enShowResult();
  if(t==="models")document.body.classList.remove("norail");
  tabStatus();setTimeout(resize,40)}
 document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
@@ -2321,7 +2516,7 @@ if(innerWidth<900)document.body.classList.add("norail");   /* phones: board firs
 $("bClear2").onclick=()=>$("bClear").click();
 $("cShapeML").addEventListener("change",tabStatus);
 setInterval(tabStatus,800);
-resize();frame();msInit();smpRefresh();setTab(lsGet("tab","shapes"));localStartup();   // saved model first; site download only if switched on
+resize();frame();msInit();smpRefresh();setTab(lsGet("tab","shapes"));localStartup();enStartup();   // saved model first; site download only if switched on
 })();
 </script>
 </body>
